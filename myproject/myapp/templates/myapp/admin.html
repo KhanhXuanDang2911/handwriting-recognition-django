@@ -1,0 +1,97 @@
+{% extends 'myapp/base.html' %}
+{% load static %}
+
+{% block title %}Admin{% endblock %}
+{% block content %}
+    <link rel="stylesheet" href="{% static 'css/admin-style.css' %}">
+    <main>
+        <div class="admin-container">
+            <h1>Admin Panel</h1>
+            <div class="admin-tabs">
+                <button class="tab-btn active" data-tab="users">Users Management</button>
+                <button class="tab-btn" data-tab="history">Recognition History</button>
+            </div>
+
+            <!-- Users Management Tab -->
+            <div class="tab-content active" id="usersTab">
+                <div class="admin-controls">
+                    <div class="search-box">
+                        <input type="text" placeholder="Search users...">
+                        <button><i class="fas fa-search"></i></button>
+                    </div>
+                    <button class="add-btn" id="addUserBtn"><i class="fas fa-plus"></i> Add User</button>
+                </div>
+                <div class="admin-table-container">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Avatar</th>
+                                <th>Username</th>
+                                <th>Email</th>
+                                <th>Role</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersTableBody">
+                            <!-- Table rows will be populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+                <div class="pagination">
+                    <button class="pagination-btn" disabled><i class="fas fa-chevron-left"></i></button>
+                    <span class="pagination-info">Page 1 of 2</span>
+                    <button class="pagination-btn"><i class="fas fa-chevron-right"></i></button>
+                </div>
+            </div>
+
+            <!-- Recognition History Tab -->
+            <div class="tab-content" id="historyTab">
+                <div class="admin-controls">
+                    <div class="search-box">
+                        <input type="text" placeholder="Search in results...">
+                        <button><i class="fas fa-search"></i></button>
+                    </div>
+                    <div class="filter-options">
+                        <select id="userFilter">
+                            <option value="all">All Users</option>
+                            <option value="1">John Doe</option>
+                            <option value="2">Jane Smith</option>
+                            <option value="3">Robert Johnson</option>
+                        </select>
+                        <select id="dateFilterAdmin">
+                            <option value="all">All Time</option>
+                            <option value="today">Today</option>
+                            <option value="week">This Week</option>
+                            <option value="month">This Month</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="admin-table-container">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>User</th>
+                                <th>Preview</th>
+                                <th>Result</th>
+                                <th>Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historyTableBodyAdmin">
+                            <!-- Table rows will be populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+                <div class="pagination">
+                    <button class="pagination-btn" disabled><i class="fas fa-chevron-left"></i></button>
+                    <span class="pagination-info">Page 1 of 3</span>
+                    <button class="pagination-btn"><i class="fas fa-chevron-right"></i></button>
+                </div>
+            </div>
+        </div>
+    </main>
+    <script src="{% static 'js/admin.js' %}"></script>
+{% endblock %}

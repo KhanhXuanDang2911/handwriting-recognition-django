@@ -1,0 +1,36 @@
+{% extends 'myapp/base.html' %}
+{% load static %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+<main>
+        <div class="container">
+            <div class="recognition-panel">
+                <div class="upload-section">
+                    <h2>Upload Image</h2>
+                    <div class="upload-area" id="uploadArea" style="margin-top: 49px">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <p>Drag & Drop image or click to browse</p>
+                        <input type="file" id="imageUpload" accept="image/*" hidden>
+                    </div>
+                    <div class="image-preview" id="imagePreview">
+                        <img id="previewImg" src="/placeholder.svg" alt="Preview">
+                        <button class="remove-btn" id="removeImage"><i class="fas fa-times"></i></button>
+                    </div>
+                    <button class="render-btn" id="renderBtn">Recognize Text</button>
+                </div>
+            </div>
+            <div class="result-panel">
+                <div class="result-header">
+                    <h2>Recognition Result</h2>
+                    <button class="audio-btn" id="audioBtn" disabled><i class="fas fa-volume-up"></i></button>
+                </div>
+                <div class="result-content" id="resultContent">
+                    <p class="placeholder-text">Recognition results will appear here after processing.</p>
+                </div>
+            </div>
+        </div>
+    </main>
+    <script src="{% static 'js/script.js' %}"></script>
+{% endblock %}

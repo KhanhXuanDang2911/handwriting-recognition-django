@@ -1,0 +1,84 @@
+
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+     <title>{% block title %}My app{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+</head>
+
+<body>
+    <!-- Header -->
+    <header>
+        <div class="logo">
+            <a href="/home/"><img src="{% static 'images/LOGO.png' %}" alt="Logo"></a>
+        </div>
+        <nav>
+            <ul>
+                <li><a href="/home/" class="active">Home</a></li>
+                <li><a href="#">Contact</a></li>
+                <li><a href="/login/">Login</a></li>
+                <li><a href="/register/">Register</a></li>
+            </ul>
+        </nav>
+        <div class="user-profile">
+            <div class="avatar" id="avatar">
+                <img src="placeholder.svg?height=40&width=40" alt="User Avatar">
+            </div>
+            <div class="dropdown" id="dropdown">
+                <ul>
+                    <li><a href="/profile/"><i class="fas fa-user"></i> Edit Profile</a></li>
+                    <li><a href="/history/"><i class="fas fa-history"></i> Recognition History</a></li>
+                    <li><a href="/myadmin/"><i class="fas fa-users-cog"></i> Admin Panel</a></li>
+                    <li><a href="#" id="logout"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+                </ul>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+        {% block content %}
+        <!-- Trang con sẽ chèn nội dung vào đây -->
+        {% endblock %}
+    <!-- Footer -->
+    <footer>
+        <div class="footer-content">
+            <div class="footer-logo">
+                <img src="{% static 'images/LOGO.png' %}" style="filter: none" alt="Logo">
+                <p>Advanced text recognition technology at your fingertips</p>
+            </div>
+            <div class="footer-links">
+                <h3>Quick Links</h3>
+                <ul>
+                    <li><a href="home.html">Home</a></li>
+                    <li><a href="#">Contact</a></li>
+                    <li><a href="about.html">About Us</a></li>
+                    <li><a href="privacy.html">Privacy Policy</a></li>
+                </ul>
+            </div>
+            <div class="footer-contact">
+                <h3>Contact Us</h3>
+                <p><i class="fas fa-envelope"></i> info@textrecognition.com</p>
+                <p><i class="fas fa-phone"></i> +1 (123) 456-7890</p>
+                <div class="social-icons">
+                    <a href="#"><i class="fab fa-facebook"></i></a>
+                    <a href="#"><i class="fab fa-twitter"></i></a>
+                    <a href="#"><i class="fab fa-instagram"></i></a>
+                    <a href="#"><i class="fab fa-linkedin"></i></a>
+                </div>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2025 Text Recognition App. All rights reserved.</p>
+        </div>
+    </footer>
+
+</body>
+
+</html>

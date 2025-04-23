@@ -1,0 +1,42 @@
+{% extends 'myapp/base.html' %}
+{% load static %}
+
+{% block title %}History detail{% endblock %}
+{% block content %}
+
+<main>
+        <div class="detail-container">
+            <div class="detail-header">
+                <a href="/history/" class="back-btn"><i class="fas fa-arrow-left"></i> Back to History</a>
+                <h1>Recognition Detail</h1>
+                <div class="detail-meta">
+                    <span id="detailDate">Date: Loading...</span>
+                    <span id="detailId">ID: #0</span>
+                </div>
+            </div>
+            <div class="detail-content">
+                <div class="detail-image-container">
+                    <h2>Original Image</h2>
+                    <div class="detail-image">
+                        <img id="detailImage" src="placeholder.svg?height=300&width=400" alt="Original Image">
+                    </div>
+                </div>
+                <div class="detail-result-container">
+                    <div class="result-header">
+                        <h2>Recognition Result</h2>
+                        <button class="audio-btn" id="audioBtn"><i class="fas fa-volume-up"></i></button>
+                    </div>
+                    <div class="detail-result" id="detailResult">
+                        <p class="placeholder-text">Loading result...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="detail-actions">
+                <button class="action-btn"><i class="fas fa-download"></i> Download Result</button>
+                <button class="action-btn"><i class="fas fa-share-alt"></i> Share</button>
+                <button class="action-btn delete-btn"><i class="fas fa-trash"></i> Delete</button>
+            </div>
+        </div>
+    </main>
+    <script src="{% static 'js/history_detail.js' %}"></script>
+{% endblock %}

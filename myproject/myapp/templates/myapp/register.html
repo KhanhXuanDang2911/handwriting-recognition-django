@@ -1,0 +1,148 @@
+{% extends 'myapp/base.html' %}
+{% load static %}
+
+{% block title %}History detail{% endblock %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/register.css' %}">
+    <div class="login-container signup-container">
+        <div class="login-wrapper signup-wrapper">
+            <div class="login-form-side signup-form-side">
+                <div class="login-form-wrapper signup-form-wrapper">
+                    <div class="login-header">
+                        <h1>Create Account</h1>
+                        <p>Join our community today</p>
+                    </div>
+
+                    <form id="signupForm" class="login-form signup-form">
+                        <div class="form-group">
+                            <label for="fullName">Full Name</label>
+                            <div class="input-with-icon">
+                                <i class="fas fa-user"></i>
+                                <input type="text" id="fullName" name="fullName" placeholder="Enter your full name" required>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="email">Email Address</label>
+                            <div class="input-with-icon">
+                                <i class="fas fa-envelope"></i>
+                                <input type="email" id="email" name="email" placeholder="Enter your email address" required>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="username">Username</label>
+                            <div class="input-with-icon">
+                                <i class="fas fa-at"></i>
+                                <input type="text" id="username" name="username" placeholder="Choose a username" required>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="password">Password</label>
+                            <div class="input-with-icon">
+                                <i class="fas fa-lock"></i>
+                                <input type="password" id="password" name="password" placeholder="Create a password" required>
+                                <button type="button" class="toggle-password" aria-label="Toggle password visibility">
+                                    <i class="fas fa-eye" style="margin-left: -23px"></i>
+                                </button>
+                            </div>
+                            <div class="password-strength">
+                                <div class="strength-meter">
+                                    <div class="strength-meter-fill" data-strength="0"></div>
+                                </div>
+                                <div class="strength-text">Password strength: <span>Too weak</span></div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="confirmPassword">Confirm Password</label>
+                            <div class="input-with-icon">
+                                <i class="fas fa-lock"></i>
+                                <input type="password" id="confirmPassword" name="confirmPassword" placeholder="Confirm your password" required>
+                            </div>
+                        </div>
+
+                        <div class="form-group terms-group">
+                            <div class="checkbox-wrapper">
+                                <input type="checkbox" id="terms" name="terms" required>
+                                <label for="terms">I agree to the <a href="#" class="terms-link">Terms of Service</a> and <a href="#" class="terms-link">Privacy Policy</a></label>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="login-btn signup-btn">
+                            <span>Create Account</span>
+                            <i class="fas fa-user-plus"></i>
+                        </button>
+                    </form>
+
+                    <div class="social-login">
+                        <p>Or sign up with</p>
+                        <div class="social-buttons">
+                            <button class="social-btn google">
+                                <i class="fab fa-google"></i>
+                            </button>
+                            <button class="social-btn facebook">
+                                <i class="fab fa-facebook-f"></i>
+                            </button>
+                            <button class="social-btn twitter">
+                                <i class="fab fa-twitter"></i>
+                            </button>
+                            <button class="social-btn github">
+                                <i class="fab fa-github"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="signup-link login-link">
+                        <p>Already have an account? <a href="login.html">Sign in</a></p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="login-image-side signup-image-side">
+                <div class="login-image-overlay signup-image-overlay"></div>
+                <div class="login-image-content">
+                    <div class="login-logo">
+                        <img src="{% static 'images/LOGO.png' %}" alt="Text Recognition App" style="filter: none">
+                    </div>
+                    <h2>Join Our Community</h2>
+                    <p>Create an account to access all features and start converting your images to text instantly.</p>
+
+                    <div class="signup-benefits">
+                        <div class="benefit-item">
+                            <div class="benefit-icon">
+                                <i class="fas fa-cloud-upload-alt"></i>
+                            </div>
+                            <div class="benefit-content">
+                                <h3>Cloud Storage</h3>
+                                <p>Store your images and recognized text securely in the cloud.</p>
+                            </div>
+                        </div>
+
+                        <div class="benefit-item">
+                            <div class="benefit-icon">
+                                <i class="fas fa-sync-alt"></i>
+                            </div>
+                            <div class="benefit-content">
+                                <h3>Sync Across Devices</h3>
+                                <p>Access your content from any device, anywhere.</p>
+                            </div>
+                        </div>
+
+                        <div class="benefit-item">
+                            <div class="benefit-icon">
+                                <i class="fas fa-chart-line"></i>
+                            </div>
+                            <div class="benefit-content">
+                                <h3>Advanced Analytics</h3>
+                                <p>Get insights on your text recognition patterns and usage.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="{% static 'js/register.js' %}"></script>
+{% endblock %}
