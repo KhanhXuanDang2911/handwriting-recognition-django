@@ -9,7 +9,7 @@ from rest_framework.decorators import action
 from rest_framework.pagination import PageNumberPagination
 from .utils import create_response
 # Thêm vào phần import
-from django.db import IntegrityError
+from django.db import IntegrityError, models
 from rest_framework.exceptions import ValidationError
 from .utils import create_response, format_validation_errors
 
