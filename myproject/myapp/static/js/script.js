@@ -93,45 +93,56 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Recognize text (simulated)
-    renderBtn.addEventListener('click', function() {
+    renderBtn.addEventListener('click', async function () {
         // Show loading state
         resultContent.innerHTML = '<p class="placeholder-text">Processing image...</p>';
 
         // Simulate API call delay
-        setTimeout(function() {
-            // Sample recognized text (in a real app, this would come from an API)
-            const recognizedText = simulateTextRecognition();
+        // Sample recognized text (in a real app, this would come from an API)
+        const recognizedText = await simulateTextRecognition();
 
-            // Display result
-            resultContent.innerHTML = `<p class="recognized-text">${recognizedText}</p>`;
+        // Display result
+        resultContent.innerHTML = `<p class="recognized-text">${recognizedText}</p>`;
 
-            // Enable audio button
-            audioBtn.disabled = false;
-        }, 2000);
+        // Enable audio button
+        audioBtn.disabled = false;
     });
 
     // Simulate text recognition (in a real app, this would be an API call)
-    function simulateTextRecognition() {
-        const sampleTexts ="Trong thế giới ngày nay, công nghệ đang phát triển với một tốc độ chóng mặt, thay đổi cách chúng ta sống, làm việc và giao tiếp. Chúng ta không còn xa lạ với những công nghệ tiên tiến như trí tuệ nhân tạo (AI), Internet of Things (IoT), và Blockchain, tất cả đều đang tạo ra những bước tiến đáng kể trong nhiều lĩnh vực, từ y tế, giáo dục đến kinh tế. AI, chẳng hạn, đã trở thành một phần không thể thiếu trong nhiều ứng dụng hàng ngày, từ trợ lý ảo đến các hệ thống phân tích dữ liệu phức tạp.\n" +
-            "Một trong những ứng dụng thú vị của AI là trong việc nhận diện giọng nói và hình ảnh. Những hệ thống này không chỉ giúp cải thiện chất lượng cuộc sống mà còn mang lại sự tiện lợi cho người dùng. Việc sử dụng giọng nói để điều khiển thiết bị hoặc nhập liệu đang ngày càng phổ biến, giúp tiết kiệm thời gian và công sức, đồng thời tạo ra những trải nghiệm người dùng mượt mà hơn.\n" +
-            "Mặc dù vậy, với những tiến bộ trong công nghệ, chúng ta cũng phải đối mặt với những thách thức lớn. Bảo mật và quyền riêng tư trở thành những vấn đề cần được quan tâm hơn bao giờ hết. Khi mà công nghệ ngày càng thâm nhập vào mọi ngóc ngách của cuộc sống, việc bảo vệ dữ liệu cá nhân và tránh các nguy cơ tiềm ẩn trở nên cấp thiết hơn bao giờ hết. Cùng với đó, việc phát triển và sử dụng công nghệ một cách có đạo đức và trách nhiệm cũng là yếu tố không thể thiếu trong tương lai";
+    async function simulateTextRecognition() {
+    const fileInput = document.getElementById('imageUpload');
+    const formData = new FormData();
+    formData.append('file', fileInput.files[0]);
 
+    try {
+        const response = await fetch('http://192.168.56.233:8000/predict', {
+            method: 'POST',
+            body: formData
+        });
 
-        return sampleTexts;
+        const result = await response.json();
+        return result.prediction;
+    } catch (error) {
+        console.error('Error during the fetch:', error);
+        return 'Error occurred during prediction.';
     }
+}
 
-    audioBtn.addEventListener('click', function() {
+
+    audioBtn.addEventListener('click', function () {
     const text = resultContent.textContent;
 
+    // Nếu đang nói, thì hủy trước
     if (speechSynthesis.speaking) {
         speechSynthesis.cancel();
-    } else {
-        if (text && 'speechSynthesis' in window) {
-            const utterance = new SpeechSynthesisUtterance(text);
-            window.speechSynthesis.speak(utterance);
-        }
+        return; // Nếu đang nói thì hủy và không phát lại
     }
-});
+
+    if (text && 'speechSynthesis' in window) {
+        const utterance = new SpeechSynthesisUtterance(text);
+        window.speechSynthesis.speak(utterance);
+    }
+    });
 
 
     // Logout functionality (simulated)

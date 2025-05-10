@@ -10,78 +10,72 @@ document.addEventListener("DOMContentLoaded", function () {
   const logoutBtn = document.getElementById("logout");
 
   // Toggle dropdown menu
-  avatar.addEventListener("click", function () {
-    dropdown.classList.toggle("active");
-  });
+  if (avatar) {
+    avatar.addEventListener("click", function () {
+      dropdown.classList.toggle("active");
+    });
 
-  // Close dropdown when clicking outside
-  document.addEventListener("click", function (event) {
-    if (!avatar.contains(event.target) && !dropdown.contains(event.target)) {
-      dropdown.classList.remove("active");
-    }
-  });
+    // Close dropdown when clicking outside
+    document.addEventListener("click", function (event) {
+      if (!avatar.contains(event.target) && !dropdown.contains(event.target)) {
+        dropdown.classList.remove("active");
+      }
+    });
+  }
 
   // Get ID from URL
   const urlParams = new URLSearchParams(window.location.search);
   const id = urlParams.get("id");
 
-  // Sample history data (in a real app, this would come from a database)
-  const historyData = [
-    {
-      id: 1,
-      imageUrl: "placeholder.svg?height=300&width=400",
-      result: "The quick brown fox jumps over the lazy dog.",
-      date: "2023-11-15T14:30:00",
-      fullResult:
-        "The quick brown fox jumps over the lazy dog. This pangram contains every letter of the English alphabet at least once.",
-    },
-    {
-      id: 2,
-      imageUrl: "placeholder.svg?height=300&width=400",
-      result: "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-      date: "2023-11-14T10:15:00",
-      fullResult:
-        "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
-    },
-    {
-      id: 3,
-      imageUrl: "placeholder.svg?height=300&width=400",
-      result:
-        "Artificial intelligence (AI) is intelligence demonstrated by machines.",
-      date: "2023-11-13T16:45:00",
-      fullResult:
-        "Artificial intelligence (AI) is intelligence demonstrated by machines, as opposed to natural intelligence displayed by animals including humans.",
-    },
-    {
-      id: 4,
-      imageUrl: "placeholder.svg?height=300&width=400",
-      result:
-        "Text recognition technology, also known as Optical Character Recognition (OCR).",
-      date: "2023-11-12T09:20:00",
-      fullResult:
-        "Text recognition technology, also known as Optical Character Recognition (OCR), converts different types of documents, such as scanned paper documents, PDF files or images into editable and searchable data.",
-    },
-    {
-      id: 5,
-      imageUrl: "placeholder.svg?height=300&width=400",
-      result:
-        "The development of mobile applications involves creating software applications.",
-      date: "2023-11-11T13:10:00",
-      fullResult:
-        "The development of mobile applications involves creating software applications that run on mobile devices. These applications can be pre-installed or downloaded and installed by the user later.",
-    },
-  ];
+  if (!id) {
+    detailResult.innerHTML = '<p class="placeholder-text">No ID provided</p>';
+    detailDate.textContent = "Date: N/A";
+    detailId.textContent = "ID: Not found";
+    return;
+  }
 
-  // Find the record by ID
-  const record = historyData.find((item) => item.id === parseInt(id));
+  // Fetch history detail from API
+  async function fetchHistoryDetail() {
+    try {
+      const response = await fetch(`/histories/${id}/`);
 
-  if (record) {
-    // Update the UI with the record data
-    detailImage.src = record.imageUrl;
-    detailResult.innerHTML = `<p class="recognized-text">${record.fullResult}</p>`;
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (data.status === 'success') {
+        displayHistoryDetail(data.data);
+      } else {
+        throw new Error(data.message || 'Error fetching history detail');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      detailResult.innerHTML = `<p class="placeholder-text">Error: ${error.message}</p>`;
+      detailDate.textContent = "Date: N/A";
+      detailId.textContent = "ID: Not found";
+    }
+  }
+
+  // Display history detail
+  function displayHistoryDetail(record) {
+    // Xử lý URL ảnh với Cloudinary
+    if (record.image) {
+      // Kiểm tra xem URL đã có tiền tố Cloudinary chưa
+      if (!record.image.startsWith('https://')) {
+        detailImage.src = `https://res.cloudinary.com/dbqoymyi8/${record.image}`;
+      } else {
+        detailImage.src = record.image;
+      }
+    } else {
+      detailImage.src = "/placeholder.svg?height=300&width=400";
+    }
+
+    detailResult.innerHTML = `<p class="recognized-text">${record.result}</p>`;
 
     // Format date
-    const date = new Date(record.date);
+    const date = new Date(record.created_at);
     const formattedDate = `${date.toLocaleDateString()} ${date.toLocaleTimeString(
       [],
       { hour: "2-digit", minute: "2-digit" }
@@ -89,25 +83,25 @@ document.addEventListener("DOMContentLoaded", function () {
 
     detailDate.textContent = `Date: ${formattedDate}`;
     detailId.textContent = `ID: #${record.id}`;
-  } else {
-    // Handle case where record is not found
-    detailResult.innerHTML = '<p class="placeholder-text">Record not found</p>';
-    detailDate.textContent = "Date: N/A";
-    detailId.textContent = "ID: Not found";
+
+    // Set up text-to-speech
+    if (audioBtn && "speechSynthesis" in window) {
+      audioBtn.addEventListener("click", function () {
+        const utterance = new SpeechSynthesisUtterance(record.result);
+        window.speechSynthesis.speak(utterance);
+      });
+    }
   }
 
-  // Text-to-speech functionality
-  audioBtn.addEventListener("click", function () {
-    if (record && "speechSynthesis" in window) {
-      const utterance = new SpeechSynthesisUtterance(record.fullResult);
-      window.speechSynthesis.speak(utterance);
-    }
-  });
+  // Fetch history detail
+  fetchHistoryDetail();
 
   // Logout functionality (simulated)
-  logoutBtn.addEventListener("click", function (e) {
-    e.preventDefault();
-    alert("Logout successful");
-    // In a real app, this would redirect to login page or perform actual logout
-  });
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", function (e) {
+      e.preventDefault();
+      // In a real app, this would redirect to login page or perform actual logout
+      window.location.href = "/login/";
+    });
+  }
 });
