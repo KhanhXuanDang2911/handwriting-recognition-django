@@ -2,7 +2,7 @@ from django.contrib.auth.hashers import make_password
 from rest_framework import serializers
 from django.core.validators import RegexValidator, EmailValidator
 from django.db import IntegrityError
-from .models import User, History
+from .models import User, History, BlacklistedToken
 
 
 class HistorySerializer(serializers.ModelSerializer):
@@ -114,3 +114,9 @@ class UserSerializer(serializers.ModelSerializer):
             elif 'email' in str(e):
                 raise serializers.ValidationError({"email": ["Email này đã tồn tại"]})
             raise serializers.ValidationError({"detail": ["Lỗi khi cập nhật người dùng"]})
+
+class BlacklistedTokenSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BlacklistedToken
+        fields = ['id', 'token', 'user', 'blacklisted_at', 'expires_at', 'reason']
+        read_only_fields = ['id', 'blacklisted_at']

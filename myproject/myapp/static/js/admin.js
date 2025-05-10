@@ -8,7 +8,25 @@ document.addEventListener("DOMContentLoaded", () => {
     return
   }
 
+  // Kiểm tra xem người dùng đã đăng nhập chưa
+  if (!window.Auth || !window.Auth.isAuthenticated()) {
+    console.error("User is not authenticated")
+    alert("Bạn cần đăng nhập để truy cập trang quản trị. Đang chuyển hướng đến trang đăng nhập...")
+    window.location.href = "/login/"
+    return
+  }
+
+  // Kiểm tra xem người dùng có quyền admin không
+  const userData = window.Auth.getUserData()
+  if (!userData || userData.role !== "admin") {
+    console.error("User does not have admin privileges")
+    alert("Bạn không có quyền truy cập trang quản trị. Đang chuyển hướng đến trang chủ...")
+    window.location.href = "/home/"
+    return
+  }
+
   // Phần còn lại của code...
+  console.log("Admin authentication check passed. Loading admin panel...")
 })
 
 document.addEventListener("DOMContentLoaded", () => {

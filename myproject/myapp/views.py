@@ -4,7 +4,6 @@ from rest_framework import status, viewsets, filters
 from django.shortcuts import get_object_or_404
 from .models import User, History
 from .serializers import UserSerializer, HistorySerializer
-from rest_framework.permissions import AllowAny
 from rest_framework.decorators import action
 from rest_framework.pagination import PageNumberPagination
 from .utils import create_response
@@ -12,6 +11,9 @@ from .utils import create_response
 from django.db import IntegrityError, models
 from rest_framework.exceptions import ValidationError
 from .utils import create_response, format_validation_errors
+from .permissions import IsAuthenticated, IsAdmin, AllowAny, IsOwnerOrAdmin, CanCreateHistory
+from .authentication import extract_token, validate_token
+from rest_framework.response import Response
 
 
 # Frontend views
@@ -59,8 +61,23 @@ class UserViewSet(viewsets.ModelViewSet):
     search_fields = ['username', 'email', 'full_name']
     ordering_fields = ['id', 'username', 'email', 'role', 'status']
 
+    # permission_classes = [AllowAny]
     def get_permissions(self):
-        return [AllowAny()]
+        """
+        Override to set permissions based on action
+        """
+        if self.action == 'create':
+            # Allow anyone to register
+            return [AllowAny()]
+        elif self.action == 'list':
+            # Only admin can list all users
+            return [IsAdmin()]
+        elif self.action in ['update', 'partial_update', 'destroy', 'retrieve']:
+            # Admin có toàn quyền, user chỉ có quyền với tài khoản của mình
+            return [IsAuthenticated(), IsOwnerOrAdmin()]
+        else:
+            # Other actions require authentication
+            return [IsAuthenticated()]
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
@@ -222,6 +239,53 @@ class HistoryViewSet(viewsets.ModelViewSet):
     search_fields = ['result']
     ordering_fields = ['id', 'created_at']
 
+    def get_permissions(self):
+        """
+        Override to set permissions based on action
+        """
+        if self.action == 'list':
+            # Only admin can list all histories
+            return [IsAdmin()]
+        elif self.action == 'create':
+            return [IsAuthenticated(), CanCreateHistory()]
+        elif self.action == 'by_user':
+            # Cho phép admin xem tất cả, user chỉ xem của mình
+            return [IsAuthenticated()]
+        else:
+            # Other actions require authentication
+            return [IsAuthenticated(), IsOwnerOrAdmin()]
+
+    def get_queryset(self):
+        """
+        Override to filter histories based on user role
+        - Admin can see all histories
+        - Regular users can only see their own histories
+        """
+        queryset = super().get_queryset()
+
+        # Nếu action là create, trả về queryset đầy đủ
+        if self.action == 'create':
+            return queryset
+
+        # Lấy token từ request
+        token = extract_token(self.request)
+        if not token:
+            return queryset.none()  # Trả về queryset rỗng nếu không có token
+
+        try:
+            # Validate token và lấy payload
+            payload = validate_token(token)
+
+            # Admin có thể xem tất cả lịch sử
+            if payload.get('role') == 'admin':
+                return queryset
+
+            # User thường chỉ có thể xem lịch sử của mình
+            user_id = payload.get('user_id')
+            return queryset.filter(id_user__id=user_id)
+        except:
+            return queryset.none()  # Trả về queryset rỗng nếu token không hợp lệ
+
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
 
@@ -311,3 +375,95 @@ class HistoryViewSet(viewsets.ModelViewSet):
             message=f"Xóa lịch sử ID {history_id} thành công",
             status_code=status.HTTP_200_OK
         )
+
+    @action(detail=False, methods=['get'])
+    def by_user(self, request):
+        """
+        Lấy lịch sử theo user_id
+
+        Query params:
+        - user_id: ID của người dùng cần lấy lịch sử
+        - search: Tìm kiếm trong kết quả
+        - created_at__gte: Lọc theo thời gian tạo (từ ngày)
+        - page: Số trang
+        - page_size: Số lượng kết quả mỗi trang
+        """
+        # Lấy user_id từ query params
+        user_id = request.query_params.get('user_id', None)
+
+        if not user_id:
+            return create_response(
+                message="Thiếu tham số user_id",
+                errors={"user_id": ["Tham số user_id là bắt buộc"]},
+                status_code=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Kiểm tra quyền truy cập
+        token = extract_token(request)
+        if not token:
+            return create_response(
+                message="Không có quyền truy cập",
+                errors={"detail": ["Authentication credentials were not provided"]},
+                status_code=status.HTTP_401_UNAUTHORIZED
+            )
+
+        try:
+            payload = validate_token(token)
+
+            # Nếu không phải admin và không phải chủ sở hữu, từ chối truy cập
+            if payload.get('role') != 'admin' and str(payload.get('user_id')) != user_id:
+                return create_response(
+                    message="Không có quyền truy cập",
+                    errors={"detail": ["You do not have permission to view histories of this user"]},
+                    status_code=status.HTTP_403_FORBIDDEN
+                )
+
+            # Lấy user từ database
+            try:
+                user = User.objects.get(id=user_id)
+            except User.DoesNotExist:
+                return create_response(
+                    message="Người dùng không tồn tại",
+                    errors={"user_id": [f"Không tìm thấy người dùng với ID {user_id}"]},
+                    status_code=status.HTTP_404_NOT_FOUND
+                )
+
+            # Lấy lịch sử của user
+            queryset = History.objects.filter(id_user=user)
+
+            # Apply date filtering if provided
+            created_at__gte = request.query_params.get('created_at__gte', None)
+            if created_at__gte:
+                queryset = queryset.filter(created_at__gte=created_at__gte)
+
+            # Apply search filter if provided
+            search = request.query_params.get('search', None)
+            if search:
+                queryset = queryset.filter(result__icontains=search)
+
+            # Apply ordering
+            queryset = queryset.order_by('-created_at')  # Mới nhất lên đầu
+
+            # Apply pagination
+            page = self.paginate_queryset(queryset)
+
+            if page is not None:
+                serializer = self.get_serializer(page, many=True)
+                result = self.get_paginated_response(serializer.data)
+                data = result.data
+            else:
+                serializer = self.get_serializer(queryset, many=True)
+                data = serializer.data
+
+            return create_response(
+                data=data,
+                message=f"Lấy lịch sử của người dùng {user.username} thành công",
+                status_code=status.HTTP_200_OK
+            )
+
+        except Exception as e:
+            return create_response(
+                message="Lỗi khi lấy lịch sử",
+                errors={"detail": [str(e)]},
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

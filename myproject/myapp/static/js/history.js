@@ -65,6 +65,74 @@ document.addEventListener("DOMContentLoaded", function () {
     },
   ];
 
+  fetchUserAvatar()
+
+  // Function to fetch user avatar from API
+  async function fetchUserAvatar() {
+    // Check if user is authenticated
+    if (window.Auth && window.Auth.isAuthenticated()) {
+      try {
+        console.log("Fetching user avatar")
+
+        // Get user ID from auth data
+        const userData = window.Auth.getUserData()
+        if (!userData || !userData.id) {
+          console.error("User ID not found")
+          return
+        }
+
+        // Fetch user profile from API
+        const response = await fetch(`/users/${userData.id}/`, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${window.Auth.getAuthToken()}`,
+            "Content-Type": "application/json",
+          },
+        })
+
+        const result = await response.json()
+        console.log("Profile data response:", result)
+        if (response.ok && result.status === 'success') {
+          // Update avatar in header
+          const user = result.data
+          const avatarImg = avatar.querySelector("#avatar img")
+          if (avatarImg && user.avatar) {
+            console.log("Updating avatar with:", user.avatar)
+            avatarImg.src = 'https://res.cloudinary.com/dbqoymyi8/' + user.avatar
+          }
+
+          // Update user profile display
+          const userProfileSection = document.querySelector(".user-profile")
+          if (userProfileSection) {
+            userProfileSection.style.display = "block"
+          }
+
+          // Update admin menu visibility if needed
+          const adminMenuItem = document.querySelector(".admin-menu-item")
+          if (adminMenuItem && user.role === "admin") {
+            adminMenuItem.style.display = "block"
+          }
+
+          // Update localStorage with latest user data
+          if (window.Auth) {
+            window.Auth.saveAuthData(window.Auth.getAuthToken(), user)
+          }
+        } else {
+          console.error("Failed to load profile data:", result)
+        }
+      } catch (error) {
+        console.error("Error fetching profile:", error)
+      }
+    }
+  }
+
+
+  // Toggle dropdown menu
+  if (avatar) {
+    avatar.addEventListener("click", () => {
+      dropdown.classList.toggle("active")
+    })
+  }
   // Populate history table
   function populateHistoryTable(data) {
     historyTableBody.innerHTML = "";

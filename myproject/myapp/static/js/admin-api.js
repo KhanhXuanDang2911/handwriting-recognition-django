@@ -18,11 +18,45 @@ function getCSRFToken() {
   return ""
 }
 
+// Get authentication headers
+function getAuthHeaders(includeContentType = true) {
+  const headers = {}
+
+  // Add CSRF token if available
+  const csrfToken = getCSRFToken()
+  if (csrfToken) {
+    headers["X-CSRFToken"] = csrfToken
+  }
+
+  // Add JWT token if available through Auth module
+  if (window.Auth && window.Auth.isAuthenticated()) {
+    headers["Authorization"] = `Bearer ${window.Auth.getAuthToken()}`
+  }
+
+  // Add Content-Type for JSON requests
+  if (includeContentType) {
+    headers["Content-Type"] = "application/json"
+  }
+
+  return headers
+}
+
+// Check authentication status
+function checkAuthentication() {
+  if (!window.Auth || !window.Auth.isAuthenticated()) {
+    console.error("User is not authenticated")
+    alert("You must be logged in to access this feature. Redirecting to login page...")
+    window.location.href = "/login/"
+    return false
+  }
+  return true
+}
+
 // Pagination state
 const usersPagination = {
   currentPage: 1,
   totalPages: 1,
-  pageSize: 9999,
+  pageSize: 1000,
   count: 0,
   next: null,
   previous: null,
@@ -31,7 +65,7 @@ const usersPagination = {
 const historiesPagination = {
   currentPage: 1,
   totalPages: 1,
-  pageSize: 9999,
+  pageSize: 1000,
   count: 0,
   next: null,
   previous: null,
@@ -41,7 +75,7 @@ const historiesPagination = {
 function handleApiError(error) {
   console.error("API Error:", error)
 
-  let errorMessage = "Đã xảy ra lỗi khi kết nối với máy chủ"
+  let errorMessage = ""
 
   if (error.response) {
     // Server responded with error
@@ -56,14 +90,31 @@ function handleApiError(error) {
   } else if (error.request) {
     // Request made but no response
     errorMessage = "Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng."
+  } else if (error.status === 401 || error.status === 403) {
+    // Authentication error
+    errorMessage = "Phiên đăng nhập đã hết hạn hoặc bạn không có quyền truy cập. Vui lòng đăng nhập lại."
+    // Redirect to login page
+    setTimeout(() => {
+      window.location.href = "/login/"
+    }, 2000)
+  } else if (error.message) {
+    // Error has a message property
+    errorMessage = error.message
   }
 
-  alert(errorMessage)
+  // Only show alert if we have a specific error message
+  if (errorMessage) {
+    alert(errorMessage)
+  }
+
   return null
 }
 
 // API Functions for Users
 async function fetchUsers(page = 1, pageSize = 10, search = "", role = "", status = "") {
+  // Check authentication
+  if (!checkAuthentication()) return null
+
   try {
     let url = `${USERS_API}?page=${page}&page_size=${pageSize}`
 
@@ -72,16 +123,22 @@ async function fetchUsers(page = 1, pageSize = 10, search = "", role = "", statu
     if (status) url += `&status=${encodeURIComponent(status)}`
 
     console.log("Fetching users with URL:", url)
-    const response = await fetch(url)
+    const response = await fetch(url, {
+      method: "GET",
+      headers: getAuthHeaders(false), // Don't include Content-Type for GET requests
+    })
 
     if (!response.ok) {
+      if (response.status === 401 || response.status === 403) {
+        throw { status: response.status, message: "Authentication error" }
+      }
       throw new Error(`HTTP error! Status: ${response.status}`)
     }
 
     const data = await response.json()
     console.log("Users API response:", data)
 
-    if (data.status === "success") {
+    if (data.status === 'success') {
       // Update pagination state directly from API response
       usersPagination.currentPage = Number.parseInt(page, 10)
       usersPagination.count = data.data.count || 0
@@ -104,16 +161,25 @@ async function fetchUsers(page = 1, pageSize = 10, search = "", role = "", statu
 }
 
 async function fetchUserById(userId) {
+  // Check authentication
+  if (!checkAuthentication()) return null
+
   try {
-    const response = await fetch(`${USERS_API}${userId}/`)
+    const response = await fetch(`${USERS_API}${userId}/`, {
+      method: "GET",
+      headers: getAuthHeaders(false), // Don't include Content-Type for GET requests
+    })
 
     if (!response.ok) {
+      if (response.status === 401 || response.status === 403) {
+        throw { status: response.status, message: "Authentication error" }
+      }
       throw new Error(`HTTP error! Status: ${response.status}`)
     }
 
     const data = await response.json()
 
-    if (data.status === "success") {
+    if (data.status === 'success') {
       return data.data
     } else {
       throw new Error(data.message || "Lỗi khi lấy thông tin người dùng")
@@ -124,25 +190,26 @@ async function fetchUserById(userId) {
 }
 
 async function createUser(userData) {
-  try {
-    const csrfToken = getCSRFToken()
+  // Check authentication
+  if (!checkAuthentication()) return null
 
+  try {
     const response = await fetch(USERS_API, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-CSRFToken": csrfToken,
-      },
+      headers: getAuthHeaders(),
       body: JSON.stringify(userData),
     })
 
     const data = await response.json()
 
     if (!response.ok) {
+      if (response.status === 401 || response.status === 403) {
+        throw { status: response.status, message: "Authentication error" }
+      }
       throw { response: { data } }
     }
 
-    if (data.status === "success") {
+    if (data.status === 'success') {
       return data.data
     } else {
       throw new Error(data.message || "Lỗi khi tạo người dùng")
@@ -153,25 +220,26 @@ async function createUser(userData) {
 }
 
 async function updateUser(userId, userData) {
-  try {
-    const csrfToken = getCSRFToken()
+  // Check authentication
+  if (!checkAuthentication()) return null
 
+  try {
     const response = await fetch(`${USERS_API}${userId}/`, {
       method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        "X-CSRFToken": csrfToken,
-      },
+      headers: getAuthHeaders(),
       body: JSON.stringify(userData),
     })
 
     const data = await response.json()
 
     if (!response.ok) {
+      if (response.status === 401 || response.status === 403) {
+        throw { status: response.status, message: "Authentication error" }
+      }
       throw { response: { data } }
     }
 
-    if (data.status === "success") {
+    if (data.status === 'success') {
       return data.data
     } else {
       throw new Error(data.message || "Lỗi khi cập nhật người dùng")
@@ -182,18 +250,21 @@ async function updateUser(userId, userData) {
 }
 
 async function deleteUser(userId) {
-  try {
-    const csrfToken = getCSRFToken()
+  // Check authentication
+  if (!checkAuthentication()) return null
 
+  try {
     const response = await fetch(`${USERS_API}${userId}/`, {
       method: "DELETE",
-      headers: {
-        "X-CSRFToken": csrfToken,
-      },
+      headers: getAuthHeaders(false), // Don't include Content-Type for DELETE requests
     })
 
     if (response.status === 204 || response.status === 200) {
       return true // Successful deletion
+    }
+
+    if (response.status === 401 || response.status === 403) {
+      throw { status: response.status, message: "Authentication error" }
     }
 
     const data = await response.json()
@@ -202,7 +273,7 @@ async function deleteUser(userId) {
       throw { response: { data } }
     }
 
-    if (data.status === "success") {
+    if (data.status === 'success') {
       return true
     } else {
       throw new Error(data.message || "Lỗi khi xóa người dùng")
@@ -214,6 +285,9 @@ async function deleteUser(userId) {
 
 // API Functions for Histories
 async function fetchHistories(page = 1, pageSize = 10, search = "", userId = "", dateFilter = "") {
+  // Check authentication
+  if (!checkAuthentication()) return null
+
   try {
     let url = `${HISTORIES_API}?page=${page}&page_size=${pageSize}`
 
@@ -248,16 +322,22 @@ async function fetchHistories(page = 1, pageSize = 10, search = "", userId = "",
     }
 
     console.log("Fetching histories with URL:", url)
-    const response = await fetch(url)
+    const response = await fetch(url, {
+      method: "GET",
+      headers: getAuthHeaders(false), // Don't include Content-Type for GET requests
+    })
 
     if (!response.ok) {
+      if (response.status === 401 || response.status === 403) {
+        throw { status: response.status, message: "Authentication error" }
+      }
       throw new Error(`HTTP error! Status: ${response.status}`)
     }
 
     const data = await response.json()
     console.log("History API response:", data)
 
-    if (data.status === "success") {
+    if (data.status === 'success') {
       // Update pagination state directly from API response
       historiesPagination.currentPage = Number.parseInt(page, 10)
       historiesPagination.count = data.data.count || 0
@@ -280,16 +360,25 @@ async function fetchHistories(page = 1, pageSize = 10, search = "", userId = "",
 }
 
 async function fetchHistoryById(historyId) {
+  // Check authentication
+  if (!checkAuthentication()) return null
+
   try {
-    const response = await fetch(`${HISTORIES_API}${historyId}/`)
+    const response = await fetch(`${HISTORIES_API}${historyId}/`, {
+      method: "GET",
+      headers: getAuthHeaders(false), // Don't include Content-Type for GET requests
+    })
 
     if (!response.ok) {
+      if (response.status === 401 || response.status === 403) {
+        throw { status: response.status, message: "Authentication error" }
+      }
       throw new Error(`HTTP error! Status: ${response.status}`)
     }
 
     const data = await response.json()
 
-    if (data.status === "success") {
+    if (data.status === 'success') {
       return data.data
     } else {
       throw new Error(data.message || "Lỗi khi lấy thông tin lịch sử")
@@ -300,25 +389,26 @@ async function fetchHistoryById(historyId) {
 }
 
 async function updateHistory(historyId, historyData) {
-  try {
-    const csrfToken = getCSRFToken()
+  // Check authentication
+  if (!checkAuthentication()) return null
 
+  try {
     const response = await fetch(`${HISTORIES_API}${historyId}/`, {
       method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        "X-CSRFToken": csrfToken,
-      },
+      headers: getAuthHeaders(),
       body: JSON.stringify(historyData),
     })
 
     const data = await response.json()
 
     if (!response.ok) {
+      if (response.status === 401 || response.status === 403) {
+        throw { status: response.status, message: "Authentication error" }
+      }
       throw { response: { data } }
     }
 
-    if (data.status === "success") {
+    if (data.status === 'success') {
       return data.data
     } else {
       throw new Error(data.message || "Lỗi khi cập nhật lịch sử")
@@ -329,18 +419,21 @@ async function updateHistory(historyId, historyData) {
 }
 
 async function deleteHistory(historyId) {
-  try {
-    const csrfToken = getCSRFToken()
+  // Check authentication
+  if (!checkAuthentication()) return null
 
+  try {
     const response = await fetch(`${HISTORIES_API}${historyId}/`, {
       method: "DELETE",
-      headers: {
-        "X-CSRFToken": csrfToken,
-      },
+      headers: getAuthHeaders(false), // Don't include Content-Type for DELETE requests
     })
 
     if (response.status === 204 || response.status === 200) {
       return true // Successful deletion
+    }
+
+    if (response.status === 401 || response.status === 403) {
+      throw { status: response.status, message: "Authentication error" }
     }
 
     const data = await response.json()
@@ -349,7 +442,7 @@ async function deleteHistory(historyId) {
       throw { response: { data } }
     }
 
-    if (data.status === "success") {
+    if (data.status === 'success') {
       return true
     } else {
       throw new Error(data.message || "Lỗi khi xóa lịch sử")

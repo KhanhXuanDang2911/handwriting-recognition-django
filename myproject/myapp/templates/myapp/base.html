@@ -1,4 +1,3 @@
-
 {% load static %}
 
 <!DOCTYPE html>
@@ -10,8 +9,12 @@
      <title>{% block title %}My app{% endblock %}</title>
     <link rel="stylesheet" href="{% static 'css/styles.css' %}">
     <link rel="stylesheet" href="{% static 'css/responsive_header_footer.css' %}">
+    <link rel="stylesheet" href="{% static 'css/notifications.css' %}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <!-- Load notification.js first to ensure it's available for other scripts -->
+    <script src="{% static 'js/notification.js' %}"></script>
+    <script src="{% static 'js/auth.js' %}"></script>
 </head>
 
 <body>
@@ -24,11 +27,11 @@
             <ul>
                 <li><a href="/home/" class="active">Home</a></li>
                 <li><a href="#">Contact</a></li>
-                <li><a href="/login/">Login</a></li>
-                <li><a href="/register/">Register</a></li>
+                <li class="auth-login-link"><a href="/login/">Login</a></li>
+                <li class="auth-register-link"><a href="/register/">Register</a></li>
             </ul>
         </nav>
-        <div class="user-profile">
+        <div class="user-profile" style="display: none;">
             <div class="avatar" id="avatar">
                 <img src="placeholder.svg?height=40&width=40" alt="User Avatar">
             </div>
@@ -36,7 +39,7 @@
                 <ul>
                     <li><a href="/profile/"><i class="fas fa-user"></i> Edit Profile</a></li>
                     <li><a href="/history/"><i class="fas fa-history"></i> Recognition History</a></li>
-                    <li><a href="/myadmin/"><i class="fas fa-users-cog"></i> Admin Panel</a></li>
+                    <li class="admin-menu-item" style="display: none;"><a href="/myadmin/"><i class="fas fa-users-cog"></i> Admin Panel</a></li>
                     <li><a href="#" id="logout"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
                 </ul>
             </div>
@@ -80,6 +83,7 @@
         </div>
     </footer>
     <script src="{% static 'js/responsive_header_footer.js' %}"></script>
+    <!-- Remove duplicate notification.js reference -->
 </body>
 
 </html>

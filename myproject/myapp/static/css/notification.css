@@ -1,0 +1,112 @@
+/* Notification container */
+.notification-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 9999;
+  max-width: 350px;
+  width: 100%;
+}
+
+/* Notification styles */
+.notification {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  margin-bottom: 10px;
+  overflow: hidden;
+  position: relative;
+  animation: slide-in 0.3s ease-out forwards;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px;
+  border-left: 4px solid #2196f3; /* Default color */
+}
+
+/* Success notification */
+.notification.success {
+  border-left-color: #4caf50;
+}
+
+/* Error notification */
+.notification.error {
+  border-left-color: #f44336;
+}
+
+/* Warning notification */
+.notification.warning {
+  border-left-color: #ff9800;
+}
+
+/* Notification content */
+.notification-content {
+  display: flex;
+  align-items: center;
+  flex: 1;
+}
+
+.notification-content i {
+  margin-right: 10px;
+  font-size: 20px;
+}
+
+.notification-content i.fa-check-circle {
+  color: #4caf50;
+}
+
+.notification-content i.fa-exclamation-circle {
+  color: #f44336;
+}
+
+.notification-content i.fa-info-circle {
+  color: #2196f3;
+}
+
+.notification-content span {
+  font-size: 14px;
+  color: #333;
+}
+
+/* Close button */
+.notification-close {
+  background: none;
+  border: none;
+  color: #999;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 0;
+  margin-left: 10px;
+  transition: color 0.2s;
+}
+
+.notification-close:hover {
+  color: #333;
+}
+
+/* Animations */
+@keyframes slide-in {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.notification.fade-out {
+  animation: fade-out 0.3s ease-out forwards;
+}
+
+@keyframes fade-out {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
