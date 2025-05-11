@@ -16,9 +16,9 @@ cd ./myproject/
 ## 2. Create a Virtual Environment (Recommended)
 python -m venv venv
 ## 3. Activate the Virtual Environment
-On Windows:
+- On Windows:
 venv\Scripts\activate
-On macOS / Linux:
+- On macOS / Linux:
 source venv/bin/activate
 
 ## 4. Install Required Packages
