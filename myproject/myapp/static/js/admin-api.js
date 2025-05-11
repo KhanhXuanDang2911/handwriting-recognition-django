@@ -56,7 +56,7 @@ function checkAuthentication() {
 const usersPagination = {
   currentPage: 1,
   totalPages: 1,
-  pageSize: 1000,
+  pageSize: 10,
   count: 0,
   next: null,
   previous: null,
@@ -65,10 +65,16 @@ const usersPagination = {
 const historiesPagination = {
   currentPage: 1,
   totalPages: 1,
-  pageSize: 1000,
+  pageSize: 10,
   count: 0,
   next: null,
   previous: null,
+}
+
+// Cache for users data to avoid multiple API calls
+let usersCache = {
+  allUsers: [], // Store all users for filter dropdowns
+  lastFetched: null
 }
 
 // Error handling
@@ -116,6 +122,9 @@ async function fetchUsers(page = 1, pageSize = 10, search = "", role = "", statu
   if (!checkAuthentication()) return null
 
   try {
+    // Update pageSize in pagination state
+    usersPagination.pageSize = pageSize
+
     let url = `${USERS_API}?page=${page}&page_size=${pageSize}`
 
     if (search) url += `&search=${encodeURIComponent(search)}`
@@ -144,12 +153,27 @@ async function fetchUsers(page = 1, pageSize = 10, search = "", role = "", statu
       usersPagination.count = data.data.count || 0
       usersPagination.next = data.data.next
       usersPagination.previous = data.data.previous
-      usersPagination.pageSize = pageSize
 
       // Calculate total pages based on count and pageSize
       usersPagination.totalPages = Math.max(1, Math.ceil(usersPagination.count / pageSize))
 
       console.log("Users pagination updated:", usersPagination)
+
+      // If this is the first page and we don't have a search filter,
+      // update the cache for filter dropdowns
+      if (page === 1 && !search && !role && !status) {
+        // Only update the cache if we have more users than before or it's been more than 5 minutes
+        const now = new Date();
+        if (!usersCache.lastFetched ||
+            (now - usersCache.lastFetched) > 5 * 60 * 1000 ||
+            data.data.results.length > usersCache.allUsers.length) {
+
+          usersCache.allUsers = data.data.results;
+          usersCache.lastFetched = now;
+          console.log("Updated users cache with", usersCache.allUsers.length, "users");
+        }
+      }
+
       return data.data
     } else {
       throw new Error(data.message || "Lỗi khi lấy dữ liệu người dùng")
@@ -158,6 +182,11 @@ async function fetchUsers(page = 1, pageSize = 10, search = "", role = "", statu
     console.error("Error fetching users:", error)
     return handleApiError(error)
   }
+}
+
+// Get all users from cache for filter dropdowns
+function getAllUsersForFilter() {
+  return usersCache.allUsers;
 }
 
 async function fetchUserById(userId) {
@@ -289,35 +318,45 @@ async function fetchHistories(page = 1, pageSize = 10, search = "", userId = "",
   if (!checkAuthentication()) return null
 
   try {
+    // Update pageSize in pagination state
+    historiesPagination.pageSize = pageSize
+
     let url = `${HISTORIES_API}?page=${page}&page_size=${pageSize}`
 
     if (search) url += `&search=${encodeURIComponent(search)}`
     if (userId && userId !== "all") url += `&user_id=${encodeURIComponent(userId)}`
 
     // Handle date filtering
-    const now = new Date()
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-    const weekStart = new Date(today)
-    weekStart.setDate(today.getDate() - today.getDay())
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
-
     if (dateFilter && dateFilter !== "all") {
-      let startDate
+      const now = new Date()
+      let filterDate;
 
       switch (dateFilter) {
         case "today":
-          startDate = today.toISOString().split("T")[0]
-          break
+          // Set to beginning of today (00:00:00)
+          filterDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          break;
         case "week":
-          startDate = weekStart.toISOString().split("T")[0]
-          break
+          // Calculate the start of the week (Monday)
+          filterDate = new Date(now);
+          const dayOfWeek = filterDate.getDay(); // 0 = Sunday, 1 = Monday, etc.
+          const diff = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Adjust for Monday as first day
+          filterDate.setDate(filterDate.getDate() - diff);
+          filterDate.setHours(0, 0, 0, 0); // Set to beginning of day
+          break;
         case "month":
-          startDate = monthStart.toISOString().split("T")[0]
-          break
+          // Set to beginning of current month
+          filterDate = new Date(now.getFullYear(), now.getMonth(), 1);
+          break;
       }
 
-      if (startDate) {
-        url += `&created_at__gte=${startDate}`
+      if (filterDate) {
+        // Format date as YYYY-MM-DD for Django
+        const formattedDate = filterDate.toISOString().split('T')[0];
+        url += `&created_at__gte=${formattedDate}`;
+
+        // For debugging
+        console.log("Filter date:", dateFilter, formattedDate);
       }
     }
 
@@ -343,7 +382,6 @@ async function fetchHistories(page = 1, pageSize = 10, search = "", userId = "",
       historiesPagination.count = data.data.count || 0
       historiesPagination.next = data.data.next
       historiesPagination.previous = data.data.previous
-      historiesPagination.pageSize = pageSize
 
       // Calculate total pages based on count and pageSize
       historiesPagination.totalPages = Math.max(1, Math.ceil(historiesPagination.count / pageSize))
@@ -461,6 +499,7 @@ window.adminApi = {
     update: updateUser,
     delete: deleteUser,
     pagination: usersPagination,
+    getAllForFilter: getAllUsersForFilter, // New function to get users from cache
   },
   histories: {
     fetch: fetchHistories,

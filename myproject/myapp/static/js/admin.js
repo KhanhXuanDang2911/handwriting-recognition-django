@@ -1,4 +1,3 @@
-// Thêm đoạn code này vào đầu file admin.js
 document.addEventListener("DOMContentLoaded", () => {
   // Kiểm tra xem adminApi đã được tải chưa
   if (!window.adminApi) {
@@ -124,14 +123,124 @@ document.addEventListener("DOMContentLoaded", () => {
     })
   })
 
+  // Declare variables
+  // const userFilter = document.getElementById('user-filter'); // Moved to top
+  // const historyUser = document.getElementById('history-user'); // Moved to top
+  // const usersTableBody = document.getElementById('users-table-body'); // Modified to use usersTableBody from top
+
+  // Function declarations for updateUserPagination and populateUsersTable
+  // function updateUserPagination() { // Modified to use updateUserPagination from below
+  //   // Implementation for updating pagination UI
+  //   // This is a placeholder, replace with actual implementation
+  //   console.log("Update User Pagination called");
+  // }
+
+  // function populateUsersTable(users) { // Modified to use populateUsersTable from below
+  //   // Implementation for populating the users table
+  //   // This is a placeholder, replace with actual implementation
+  //   console.log("Populate Users Table called with", users);
+  // }
+
+  // Populate User Filter Dropdown
+  // function populateUserFilter() { // Modified to use populateUserFilter from below
+  //   try {
+  //     // Get users from cache instead of making a new API call
+  //     const users = window.adminApi.users.getAllForFilter();
+
+  //     if (!users || users.length === 0) {
+  //       console.log("No users in cache for filter, will be populated after first users load");
+  //       return;
+  //     }
+
+  //     // Clear existing options except the "All Users" option in the filter dropdown
+  //     while (userFilter.options.length > 1) {
+  //       userFilter.remove(1)
+  //     }
+
+  //     // Clear all options in the history edit modal dropdown
+  //     if (historyUser) {
+  //       while (historyUser.options.length > 0) {
+  //         historyUser.remove(0)
+  //       }
+  //     }
+
+  //     // Add user options
+  //     users.forEach((user) => {
+  //       // For the filter dropdown
+  //       const option = document.createElement("option")
+  //       option.value = user.id
+  //       option.textContent = user.username
+  //       userFilter.appendChild(option)
+
+  //       // For the history edit modal dropdown
+  //       if (historyUser) {
+  //         const modalOption = document.createElement("option")
+  //         modalOption.value = user.id
+  //         modalOption.textContent = user.username
+  //         historyUser.appendChild(modalOption)
+  //       }
+  //     })
+
+  //     console.log(`Populated user dropdowns with ${users.length} users from cache`)
+  //   } catch (error) {
+  //     console.error("Error populating user filter:", error)
+  //   }
+  // }
+
   // Load Users with API
+  // async function loadUsers(page = 1, search = "") { // Modified to use loadUsers from below
+  //   try {
+  //     // Show loading state
+  //     usersTableBody.innerHTML = `
+  //       <tr>
+  //         <td colspan="8" style="text-align: center; padding: 2rem;">
+  //           <i class="fas fa-spinner fa-spin" style="font-size: 2rem; color: var(--primary-color);"></i>
+  //           <p style="margin-top: 1rem; color: var(--text-light);">Loading users data...</p>
+  //         </td>
+  //       </tr>
+  //     `
+
+  //     console.log(`Loading users page ${page} with search: "${search}"`)
+  //     const data = await window.adminApi.users.fetch(page, 10, search)
+
+  //     if (!data) return
+
+  //     // Update pagination UI
+  //     updateUserPagination()
+
+  //     // Populate table
+  //     populateUsersTable(data.results)
+
+  //     // Update user filter dropdown with cached data
+  //     populateUserFilter()
+  //   } catch (error) {
+  //     console.error("Error loading users:", error)
+  //     usersTableBody.innerHTML = `
+  //       <tr>
+  //         <td colspan="8" style="text-align: center; padding: 2rem; color: var(--danger);">
+  //           <i class="fas fa-exclamation-circle" style="font-size: 2rem;"></i>
+  //           <p style="margin-top: 1rem;">Error loading user data. ${error.message || ''}</p>
+  //         </td>
+  //       </tr>
+  //     `
+  //   }
+  // }
+
+  // Load Users with API - Only one API call
   async function loadUsers(page = 1, search = "") {
     try {
       // Show loading state
-      usersTableBody.innerHTML = '<tr><td colspan="8" class="text-center">Loading...</td></tr>'
+      usersTableBody.innerHTML = `
+        <tr>
+          <td colspan="8" style="text-align: center; padding: 2rem;">
+            <i class="fas fa-spinner fa-spin" style="font-size: 2rem; color: var(--primary-color);"></i>
+            <p style="margin-top: 1rem; color: var(--text-light);">Loading users data...</p>
+          </td>
+        </tr>
+      `
 
       console.log(`Loading users page ${page} with search: "${search}"`)
-      const data = await window.adminApi.users.fetch(page, window.adminApi.users.pagination.pageSize, search)
+      const data = await window.adminApi.users.fetch(page, 10, search)
 
       if (!data) return
 
@@ -141,11 +250,18 @@ document.addEventListener("DOMContentLoaded", () => {
       // Populate table
       populateUsersTable(data.results)
 
-      // Update user filter in history tab
-      await populateUserFilter()
+      // Update user filter dropdown with cached data
+      populateUserFilter()
     } catch (error) {
       console.error("Error loading users:", error)
-      usersTableBody.innerHTML = '<tr><td colspan="8" class="text-center">Error loading data</td></tr>'
+      usersTableBody.innerHTML = `
+        <tr>
+          <td colspan="8" style="text-align: center; padding: 2rem; color: var(--danger);">
+            <i class="fas fa-exclamation-circle" style="font-size: 2rem;"></i>
+            <p style="margin-top: 1rem;">Error loading user data. ${error.message || ''}</p>
+          </td>
+        </tr>
+      `
     }
   }
 
@@ -153,14 +269,21 @@ document.addEventListener("DOMContentLoaded", () => {
   async function loadHistories(page = 1, search = "", userId = "all", dateFilter = "all") {
     try {
       // Show loading state
-      historyTableBodyAdmin.innerHTML = '<tr><td colspan="6" class="text-center">Loading...</td></tr>'
+      historyTableBodyAdmin.innerHTML = `
+        <tr>
+          <td colspan="6" style="text-align: center; padding: 2rem;">
+            <i class="fas fa-spinner fa-spin" style="font-size: 2rem; color: var(--primary-color);"></i>
+            <p style="margin-top: 1rem; color: var(--text-light);">Loading history data...</p>
+          </td>
+        </tr>
+      `
 
       console.log(
         `Loading histories page ${page} with search: "${search}", userId: ${userId}, dateFilter: ${dateFilter}`,
       )
       const data = await window.adminApi.histories.fetch(
         page,
-        window.adminApi.histories.pagination.pageSize,
+        10,
         search,
         userId,
         dateFilter,
@@ -175,7 +298,14 @@ document.addEventListener("DOMContentLoaded", () => {
       populateHistoryTable(data.results)
     } catch (error) {
       console.error("Error loading histories:", error)
-      historyTableBodyAdmin.innerHTML = '<tr><td colspan="6" class="text-center">Error loading data</td></tr>'
+      historyTableBodyAdmin.innerHTML = `
+        <tr>
+          <td colspan="6" style="text-align: center; padding: 2rem; color: var(--danger);">
+            <i class="fas fa-exclamation-circle" style="font-size: 2rem;"></i>
+            <p style="margin-top: 1rem;">Error loading history data. ${error.message || ''}</p>
+          </td>
+        </tr>
+      `
     }
   }
 
@@ -207,13 +337,16 @@ document.addEventListener("DOMContentLoaded", () => {
     historyNextBtn.disabled = !next
   }
 
-  // Populate User Filter Dropdown
-  async function populateUserFilter() {
+  // Populate User Filter Dropdown - Uses cached data
+  function populateUserFilter() {
     try {
-      // Get all users for the filter - increase to get more users
-      const data = await window.adminApi.users.fetch(1, 1000) // Get up to 1000 users for the filter
+      // Get users from cache instead of making a new API call
+      const users = window.adminApi.users.getAllForFilter();
 
-      if (!data) return
+      if (!users || users.length === 0) {
+        console.log("No users in cache for filter, will be populated after first users load");
+        return;
+      }
 
       // Clear existing options except the "All Users" option in the filter dropdown
       while (userFilter.options.length > 1) {
@@ -228,27 +361,23 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       // Add user options
-      if (data.results && Array.isArray(data.results)) {
-        data.results.forEach((user) => {
-          // For the filter dropdown
-          const option = document.createElement("option")
-          option.value = user.id
-          option.textContent = user.username
-          userFilter.appendChild(option)
+      users.forEach((user) => {
+        // For the filter dropdown
+        const option = document.createElement("option")
+        option.value = user.id
+        option.textContent = user.username
+        userFilter.appendChild(option)
 
-          // For the history edit modal dropdown
-          if (historyUser) {
-            const modalOption = document.createElement("option")
-            modalOption.value = user.id
-            modalOption.textContent = user.username
-            historyUser.appendChild(modalOption)
-          }
-        })
+        // For the history edit modal dropdown
+        if (historyUser) {
+          const modalOption = document.createElement("option")
+          modalOption.value = user.id
+          modalOption.textContent = user.username
+          historyUser.appendChild(modalOption)
+        }
+      })
 
-        console.log(`Populated user dropdowns with ${data.results.length} users`)
-      } else {
-        console.error("Invalid user data format:", data)
-      }
+      console.log(`Populated user dropdowns with ${users.length} users from cache`)
     } catch (error) {
       console.error("Error populating user filter:", error)
     }
@@ -259,7 +388,14 @@ document.addEventListener("DOMContentLoaded", () => {
     usersTableBody.innerHTML = ""
 
     if (!users || users.length === 0) {
-      usersTableBody.innerHTML = '<tr><td colspan="8" class="text-center">No users found</td></tr>'
+      usersTableBody.innerHTML = `
+        <tr>
+          <td colspan="8" style="text-align: center; padding: 2rem;">
+            <i class="fas fa-users" style="font-size: 2rem; color: var(--text-light);"></i>
+            <p style="margin-top: 1rem; color: var(--text-light);">No users found</p>
+          </td>
+        </tr>
+      `
       return
     }
 
@@ -328,12 +464,20 @@ document.addEventListener("DOMContentLoaded", () => {
       })
     })
   }
+
   // Populate history table
   function populateHistoryTable(histories) {
     historyTableBodyAdmin.innerHTML = ""
 
     if (!histories || histories.length === 0) {
-      historyTableBodyAdmin.innerHTML = '<tr><td colspan="6" class="text-center">No history records found</td></tr>'
+      historyTableBodyAdmin.innerHTML = `
+        <tr>
+          <td colspan="6" style="text-align: center; padding: 2rem;">
+            <i class="fas fa-history" style="font-size: 2rem; color: var(--text-light);"></i>
+            <p style="margin-top: 1rem; color: var(--text-light);">No history records found</p>
+          </td>
+        </tr>
+      `
       return
     }
 
@@ -385,7 +529,7 @@ document.addEventListener("DOMContentLoaded", () => {
           <button class="action-icon edit-history" data-id="${item.id}" data-user-id="${userId}">
               <i class="fas fa-edit"></i>
           </button>
-          <a href="history-detail/?id=${item.id}" class="action-icon">
+          <a href="/history-detail/?id=${item.id}" class="action-icon">
               <i class="fas fa-eye"></i>
           </a>
           <button class="action-icon delete-history" data-id="${item.id}">
@@ -413,9 +557,10 @@ document.addEventListener("DOMContentLoaded", () => {
       })
     })
   }
-  // Initial data loading
+
+  // Initial data loading - only call loadUsers once
   loadUsers()
-  populateUserFilter()
+  // Don't call populateUserFilter() separately, it will be called by loadUsers
 
   // Open add user modal
   addUserBtn.addEventListener("click", () => {
@@ -457,8 +602,8 @@ document.addEventListener("DOMContentLoaded", () => {
         historyModalTitle.textContent = "Edit Recognition Record"
         historyId.value = record.id
 
-        // First, make sure we have users in the dropdown
-        await populateUserFilter()
+        // Make sure we have users in the dropdown from cache
+        populateUserFilter()
 
         // Debug log for user dropdown
         console.log(
@@ -522,6 +667,7 @@ document.addEventListener("DOMContentLoaded", () => {
       alert("Failed to load history details. Please try again.")
     }
   }
+
   // Open delete user modal
   function openDeleteUserModal(id, username) {
     deleteMessage.textContent = `Are you sure you want to delete user "${username}"?`
@@ -646,6 +792,7 @@ document.addEventListener("DOMContentLoaded", () => {
       console.error("Error saving user:", error)
     }
   })
+
   // Handle history form submission
   historyForm.addEventListener("submit", async (e) => {
     e.preventDefault()
@@ -678,39 +825,47 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   })
 
-  // User pagination - Direct event handlers with proper function binding
-  userPrevBtn.onclick = () => {
-    const prevUrl = window.adminApi.users.pagination.previous
-    if (prevUrl) {
-      console.log("Navigating to previous page:", prevUrl)
-      window.location.href = prevUrl
+  // User pagination - Improved implementation
+  userPrevBtn.addEventListener("click", () => {
+    if (!userPrevBtn.disabled) {
+      const prevPage = window.adminApi.users.pagination.currentPage - 1
+      if (prevPage >= 1) {
+        console.log(`Navigating to previous page: ${prevPage}`)
+        loadUsers(prevPage, userSearchInput.value)
+      }
     }
-  }
+  })
 
-  userNextBtn.onclick = () => {
-    const nextUrl = window.adminApi.users.pagination.next
-    if (nextUrl) {
-      console.log("Navigating to next page:", nextUrl)
-      window.location.href = nextUrl
+  userNextBtn.addEventListener("click", () => {
+    if (!userNextBtn.disabled) {
+      const nextPage = window.adminApi.users.pagination.currentPage + 1
+      if (nextPage <= window.adminApi.users.pagination.totalPages) {
+        console.log(`Navigating to next page: ${nextPage}`)
+        loadUsers(nextPage, userSearchInput.value)
+      }
     }
-  }
+  })
 
-  // History pagination - Direct URL navigation
-  historyPrevBtn.onclick = () => {
-    const prevUrl = window.adminApi.histories.pagination.previous
-    if (prevUrl) {
-      console.log("Navigating to previous page:", prevUrl)
-      window.location.href = prevUrl
+  // History pagination - Improved implementation
+  historyPrevBtn.addEventListener("click", () => {
+    if (!historyPrevBtn.disabled) {
+      const prevPage = window.adminApi.histories.pagination.currentPage - 1
+      if (prevPage >= 1) {
+        console.log(`Navigating to previous history page: ${prevPage}`)
+        loadHistories(prevPage, historySearchInput.value, userFilter.value, dateFilterAdmin.value)
+      }
     }
-  }
+  })
 
-  historyNextBtn.onclick = () => {
-    const nextUrl = window.adminApi.histories.pagination.next
-    if (nextUrl) {
-      console.log("Navigating to next page:", nextUrl)
-      window.location.href = nextUrl
+  historyNextBtn.addEventListener("click", () => {
+    if (!historyNextBtn.disabled) {
+      const nextPage = window.adminApi.histories.pagination.currentPage + 1
+      if (nextPage <= window.adminApi.histories.pagination.totalPages) {
+        console.log(`Navigating to next history page: ${nextPage}`)
+        loadHistories(nextPage, historySearchInput.value, userFilter.value, dateFilterAdmin.value)
+      }
     }
-  }
+  })
 
   // Search functionality
   userSearchBtn.addEventListener("click", () => {

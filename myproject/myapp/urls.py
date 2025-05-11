@@ -15,7 +15,9 @@ urlpatterns = [
     path('history-detail/', views.history_detail, name='history_detail'),
     path('login/', views.login, name='login'),
     path('register/', views.register, name='register'),
+    path('contact/', views.contact, name='contact'),
     path('', include(router.urls)),
     path('auth/login/', LoginView.as_view(), name='api_login'),
     path('auth/logout/', LogoutView.as_view(), name='api_logout'),
+    path('api/text-to-speech/', views.text_to_speech, name='text_to_speech'),
 ]

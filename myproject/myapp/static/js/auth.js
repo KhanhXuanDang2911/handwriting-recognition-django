@@ -156,7 +156,7 @@ async function updateAuthUI() {
 
       // Cập nhật avatar nếu có
       if (userAvatar && userData.avatar) {
-        userAvatar.src = userData.avatar
+        userAvatar.src = 'https://res.cloudinary.com/dbqoymyi8/' + userData.avatar
       }
 
       // Hiển thị/ẩn menu admin dựa vào role

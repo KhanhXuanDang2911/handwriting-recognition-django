@@ -1,212 +1,263 @@
 document.addEventListener("DOMContentLoaded", function () {
-  // DOM Elements
-  const avatar = document.getElementById("avatar");
-  const dropdown = document.getElementById("dropdown");
-  const historyTableBody = document.getElementById("historyTableBody");
-  const logoutBtn = document.getElementById("logout");
-  const dateFilter = document.getElementById("dateFilter");
+    // DOM Elements
+    const avatar = document.getElementById("avatar");
+    const dropdown = document.getElementById("dropdown");
+    const historyTableBody = document.getElementById("historyTableBody");
+    const dateFilter = document.getElementById("dateFilter");
+    const searchBox = document.querySelector(".search-box input");
+    const searchButton = document.querySelector(".search-box button");
+    const paginationPrev = document.querySelector(".pagination-btn:first-child");
+    const paginationNext = document.querySelector(".pagination-btn:last-child");
+    const paginationInfo = document.querySelector(".pagination-info");
 
-  // Toggle dropdown menu
-  avatar.addEventListener("click", function () {
-    dropdown.classList.toggle("active");
-  });
+    // Pagination state
+    let currentPage = 1;
+    let totalPages = 1;
+    let pageSize = 10;
 
-  // Close dropdown when clicking outside
-  document.addEventListener("click", function (event) {
-    if (!avatar.contains(event.target) && !dropdown.contains(event.target)) {
-      dropdown.classList.remove("active");
+    // Toggle dropdown menu
+    if (avatar) {
+        avatar.addEventListener("click", function () {
+            dropdown.classList.toggle("active");
+        });
     }
-  });
 
-  // Sample history data (in a real app, this would come from a database)
-  const historyData = [
-    {
-      id: 1,
-      imageUrl: "placeholder.svg?height=50&width=50",
-      result: "The quick brown fox jumps over the lazy dog.",
-      date: "2023-11-15T14:30:00",
-      fullResult:
-        "The quick brown fox jumps over the lazy dog. This pangram contains every letter of the English alphabet at least once.",
-    },
-    {
-      id: 2,
-      imageUrl: "placeholder.svg?height=50&width=50",
-      result: "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-      date: "2023-11-14T10:15:00",
-      fullResult:
-        "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
-    },
-    {
-      id: 3,
-      imageUrl: "placeholder.svg?height=50&width=50",
-      result:
-        "Artificial intelligence (AI) is intelligence demonstrated by machines.",
-      date: "2023-11-13T16:45:00",
-      fullResult:
-        "Artificial intelligence (AI) is intelligence demonstrated by machines, as opposed to natural intelligence displayed by animals including humans.",
-    },
-    {
-      id: 4,
-      imageUrl: "placeholder.svg?height=50&width=50",
-      result:
-        "Text recognition technology, also known as Optical Character Recognition (OCR).",
-      date: "2023-11-12T09:20:00",
-      fullResult:
-        "Text recognition technology, also known as Optical Character Recognition (OCR), converts different types of documents, such as scanned paper documents, PDF files or images into editable and searchable data.",
-    },
-    {
-      id: 5,
-      imageUrl: "placeholder.svg?height=50&width=50",
-      result:
-        "The development of mobile applications involves creating software applications.",
-      date: "2023-11-11T13:10:00",
-      fullResult:
-        "The development of mobile applications involves creating software applications that run on mobile devices. These applications can be pre-installed or downloaded and installed by the user later.",
-    },
-  ];
-
-  fetchUserAvatar()
-
-  // Function to fetch user avatar from API
-  async function fetchUserAvatar() {
-    // Check if user is authenticated
-    if (window.Auth && window.Auth.isAuthenticated()) {
-      try {
-        console.log("Fetching user avatar")
-
-        // Get user ID from auth data
-        const userData = window.Auth.getUserData()
-        if (!userData || !userData.id) {
-          console.error("User ID not found")
-          return
+    // Close dropdown when clicking outside
+    document.addEventListener("click", function (event) {
+        if (!avatar.contains(event.target) && !dropdown.contains(event.target)) {
+            dropdown.classList.remove("active");
         }
-
-        // Fetch user profile from API
-        const response = await fetch(`/users/${userData.id}/`, {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${window.Auth.getAuthToken()}`,
-            "Content-Type": "application/json",
-          },
-        })
-
-        const result = await response.json()
-        console.log("Profile data response:", result)
-        if (response.ok && result.status === 'success') {
-          // Update avatar in header
-          const user = result.data
-          const avatarImg = avatar.querySelector("#avatar img")
-          if (avatarImg && user.avatar) {
-            console.log("Updating avatar with:", user.avatar)
-            avatarImg.src = 'https://res.cloudinary.com/dbqoymyi8/' + user.avatar
-          }
-
-          // Update user profile display
-          const userProfileSection = document.querySelector(".user-profile")
-          if (userProfileSection) {
-            userProfileSection.style.display = "block"
-          }
-
-          // Update admin menu visibility if needed
-          const adminMenuItem = document.querySelector(".admin-menu-item")
-          if (adminMenuItem && user.role === "admin") {
-            adminMenuItem.style.display = "block"
-          }
-
-          // Update localStorage with latest user data
-          if (window.Auth) {
-            window.Auth.saveAuthData(window.Auth.getAuthToken(), user)
-          }
-        } else {
-          console.error("Failed to load profile data:", result)
-        }
-      } catch (error) {
-        console.error("Error fetching profile:", error)
-      }
-    }
-  }
-
-
-  // Toggle dropdown menu
-  if (avatar) {
-    avatar.addEventListener("click", () => {
-      dropdown.classList.toggle("active")
-    })
-  }
-  // Populate history table
-  function populateHistoryTable(data) {
-    historyTableBody.innerHTML = "";
-
-    data.forEach((item) => {
-      const row = document.createElement("tr");
-
-      // Format date
-      const date = new Date(item.date);
-      const formattedDate = `${date.toLocaleDateString()} ${date.toLocaleTimeString(
-        [],
-        { hour: "2-digit", minute: "2-digit" }
-      )}`;
-
-      // Truncate result for preview
-      const truncatedResult =
-        item.result.length > 50
-          ? item.result.substring(0, 50) + "..."
-          : item.result;
-
-      row.innerHTML = `
-                <td>${item.id}</td>
-                <td><img src="${item.imageUrl}" alt="Preview" class="history-thumbnail"></td>
-                <td>${truncatedResult}</td>
-                <td>${formattedDate}</td>
-                <td>
-                    <a href="/history-detail/?id=${item.id}" class="view-btn">
-                        <i class="fas fa-eye"></i> View
-                    </a>
-                </td>
-            `;
-
-      historyTableBody.appendChild(row);
     });
-  }
 
-  // Initial population of the table
-  populateHistoryTable(historyData);
-
-  // Filter by date
-  dateFilter.addEventListener("change", function () {
-    const filterValue = this.value;
-    let filteredData = [...historyData];
-
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const weekStart = new Date(today);
-    weekStart.setDate(today.getDate() - today.getDay());
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-
-    if (filterValue !== "all") {
-      filteredData = historyData.filter((item) => {
-        const itemDate = new Date(item.date);
-
-        switch (filterValue) {
-          case "today":
-            return itemDate >= today;
-          case "week":
-            return itemDate >= weekStart;
-          case "month":
-            return itemDate >= monthStart;
-          default:
-            return true;
+    // Check authentication status
+    function checkAuth() {
+        if (!window.Auth || !window.Auth.isAuthenticated()) {
+            // Redirect to login page if not authenticated
+            window.location.href = "/login/";
+            return false;
         }
-      });
+        return true;
     }
 
-    populateHistoryTable(filteredData);
-  });
+    // Format date for display
+    function formatDate(dateString) {
+        const date = new Date(dateString);
+        return `${date.toLocaleDateString()} ${date.toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit"
+        })}`;
+    }
 
-  // Logout functionality (simulated)
-  logoutBtn.addEventListener("click", function (e) {
-    e.preventDefault();
-    alert("Logout successful");
-    // In a real app, this would redirect to login page or perform actual logout
-  });
+    // Truncate text for display
+    function truncateText(text, maxLength = 50) {
+        if (text.length > maxLength) {
+            return text.substring(0, maxLength) + "...";
+        }
+        return text;
+    }
+
+    // Fetch history data from API
+    async function fetchHistoryData() {
+        if (!checkAuth()) return;
+
+        try {
+            // Show loading state
+            historyTableBody.innerHTML = `
+        <tr>
+          <td colspan="5" style="text-align: center; padding: 2rem;">
+            <i class="fas fa-spinner fa-spin" style="font-size: 2rem; color: var(--primary-color);"></i>
+            <p style="margin-top: 1rem; color: var(--text-light);">Loading history data...</p>
+          </td>
+        </tr>
+      `;
+
+            // Get user data from Auth
+            const userData = window.Auth.getUserData();
+            if (!userData || !userData.id) {
+                throw new Error("User data not found");
+            }
+
+            // Build query parameters
+            const params = new URLSearchParams();
+            params.append("user_id", userData.id);
+            params.append("page", currentPage);
+            params.append("page_size", pageSize);
+
+            // Add date filter if selected
+            const filterValue = dateFilter.value;
+            if (filterValue !== "all") {
+                const now = new Date();
+                let filterDate;
+
+                switch (filterValue) {
+                    case "today":
+                        filterDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                        break;
+                    case "week": {
+                        const dayOfWeek = now.getDay(); // 0 (CN) -> 6 (T7)
+                        const diffToMonday = (dayOfWeek + 6) % 7; // Chuyển CN = 6, T2 = 0, ...
+                        const monday = new Date(now);
+                        monday.setDate(now.getDate() - diffToMonday);
+                        monday.setHours(0, 0, 0, 0);
+
+                        const sunday = new Date(monday);
+                        sunday.setDate(monday.getDate() + 6);
+                        sunday.setHours(23, 59, 59, 999);
+
+                        params.append("created_at__gte", monday.toISOString());
+                        params.append("created_at__lte", sunday.toISOString());
+                        break;
+                    }
+
+                    case "month":
+                        filterDate = new Date(now.getFullYear(), now.getMonth(), 1);
+                        break;
+                }
+
+                if (filterDate) {
+                    params.append("created_at__gte", filterDate.toISOString());
+                }
+            }
+
+            // Add search term if provided
+            const searchTerm = searchBox.value.trim();
+            if (searchTerm) {
+                params.append("search", searchTerm);
+            }
+
+            // Fetch data from API
+            const response = await fetch(`/histories/by_user/?${params.toString()}`, {
+                method: "GET",
+                headers: window.Auth.getAuthHeaders(),
+            });
+
+            const result = await response.json();
+
+            if (response.ok && result.status === "success") {
+                // Update pagination info
+                if (result.data.count !== undefined) {
+                    totalPages = Math.ceil(result.data.count / pageSize);
+                    paginationInfo.textContent = `Page ${currentPage} of ${totalPages}`;
+
+                    // Update pagination buttons
+                    paginationPrev.disabled = currentPage <= 1;
+                    paginationNext.disabled = currentPage >= totalPages;
+                }
+
+                // Populate table with data
+                populateHistoryTable(result.data.results || result.data);
+            } else {
+                throw new Error(result.message || "Failed to fetch history data");
+            }
+        } catch (error) {
+            console.error("Error fetching history:", error);
+            historyTableBody.innerHTML = `
+        <tr>
+          <td colspan="5" style="text-align: center; padding: 2rem; color: var(--danger);">
+            <i class="fas fa-exclamation-circle" style="font-size: 2rem;"></i>
+            <p style="margin-top: 1rem;">Error loading history data. ${error.message}</p>
+          </td>
+        </tr>
+      `;
+
+            // Show notification if available
+            if (window.showNotification) {
+                window.showNotification("Failed to load history data", "error");
+            }
+        }
+    }
+
+    // Populate history table with data
+    function populateHistoryTable(data) {
+        if (!data || data.length === 0) {
+            historyTableBody.innerHTML = `
+        <tr>
+          <td colspan="5" style="text-align: center; padding: 2rem;">
+            <i class="fas fa-history" style="font-size: 2rem; color: var(--text-light);"></i>
+            <p style="margin-top: 1rem; color: var(--text-light);">No history records found</p>
+          </td>
+        </tr>
+      `;
+            return;
+        }
+
+        historyTableBody.innerHTML = "";
+
+        data.forEach((item, index) => {
+            const row = document.createElement("tr");
+
+            // Calculate the actual item number based on pagination
+            const itemNumber = (currentPage - 1) * pageSize + index + 1;
+
+            // Get image URL - handle both full URLs and Cloudinary paths
+            let imageUrl = item.image || "placeholder.svg?height=50&width=50";
+            if (imageUrl && imageUrl.startsWith('image/upload')) {
+                imageUrl = 'https://res.cloudinary.com/dbqoymyi8/' + imageUrl;
+            }
+
+            // Format date
+            const formattedDate = formatDate(item.created_at);
+
+            // Truncate result for preview
+            const truncatedResult = truncateText(item.result);
+
+            row.innerHTML = `
+        <td>${itemNumber}</td>
+        <td><img src="${imageUrl}" alt="Preview" class="history-thumbnail"></td>
+        <td>${truncatedResult}</td>
+        <td>${formattedDate}</td>
+        <td>
+          <a href="/history-detail/?id=${item.id}" class="view-btn">
+            <i class="fas fa-eye"></i> View
+          </a>
+        </td>
+      `;
+
+            historyTableBody.appendChild(row);
+        });
+    }
+
+    // Event listeners for filters and pagination
+    dateFilter.addEventListener("change", function () {
+        currentPage = 1; // Reset to first page when filter changes
+        fetchHistoryData();
+    });
+
+    searchButton.addEventListener("click", function (e) {
+        e.preventDefault();
+        currentPage = 1; // Reset to first page when searching
+        fetchHistoryData();
+    });
+
+    // Allow search on Enter key
+    searchBox.addEventListener("keypress", function (e) {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            currentPage = 1;
+            fetchHistoryData();
+        }
+    });
+
+    // Pagination controls
+    paginationPrev.addEventListener("click", function () {
+        if (currentPage > 1) {
+            currentPage--;
+            fetchHistoryData();
+        }
+    });
+
+    paginationNext.addEventListener("click", function () {
+        if (currentPage < totalPages) {
+            currentPage++;
+            fetchHistoryData();
+        }
+    });
+
+    // Initial data fetch
+    fetchHistoryData();
+
+    // Fetch user avatar
+    if (window.Auth) {
+        window.Auth.fetchUserProfile();
+    }
 });

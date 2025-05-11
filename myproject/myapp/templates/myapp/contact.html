@@ -1,0 +1,224 @@
+{% extends 'myapp/base.html' %}
+{% load static %}
+
+{% block title %}Contact Us{% endblock %}
+
+{% block content %}
+    <main>
+        <div class="container" style="grid-template-columns: 1fr;">
+            <!-- Page Title -->
+            <div style="text-align: center; margin-bottom: 2rem;">
+                <h1 style="font-size: 2.25rem; margin-bottom: 1rem;">Get in Touch</h1>
+                <p style="color: var(--text-light); max-width: 700px; margin: 0 auto;">
+                    Have questions about our handwriting recognition technology? We're here to help! Fill out the form
+                    below
+                    and our team will get back to you as soon as possible.
+                </p>
+            </div>
+
+            <!-- Contact Content -->
+            <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 2rem;">
+                <!-- Contact Information -->
+                <div class="recognition-panel">
+                    <h2 style="color: var(--primary-color); margin-bottom: 1.5rem;">Contact Information</h2>
+
+                    <div style="margin-bottom: 2rem;">
+                        <div style="display: flex; align-items: flex-start; margin-bottom: 1.5rem;">
+                            <div style="background-color: rgba(79, 70, 229, 0.1); width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 1rem;">
+                                <i class="fas fa-envelope" style="color: var(--primary-color);"></i>
+                            </div>
+                            <div>
+                                <h3 style="font-weight: 600; margin-bottom: 0.25rem;">Email</h3>
+                                <p style="color: var(--text-light);">pbl5@handwritingrecognition.com</p>
+                            </div>
+                        </div>
+
+                        <div style="display: flex; align-items: flex-start; margin-bottom: 1.5rem;">
+                            <div style="background-color: rgba(79, 70, 229, 0.1); width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 1rem;">
+                                <i class="fas fa-phone" style="color: var(--primary-color);"></i>
+                            </div>
+                            <div>
+                                <h3 style="font-weight: 600; margin-bottom: 0.25rem;">Phone</h3>
+                                <p style="color: var(--text-light);">+1 (123) 456-7890</p>
+                            </div>
+                        </div>
+
+                        <div style="display: flex; align-items: flex-start;">
+                            <div style="background-color: rgba(79, 70, 229, 0.1); width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 1rem;">
+                                <i class="fas fa-map-marker-alt" style="color: var(--primary-color);"></i>
+                            </div>
+                            <div>
+                                <h3 style="font-weight: 600; margin-bottom: 0.25rem;">Address</h3>
+                                <p style="color: var(--text-light);">
+                                    54 Nguyen Luong Bang<br>
+                                    Hoa Khanh Bac, Lien Chieu, Da Nang
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 style="font-weight: 600; margin-bottom: 1rem;">Connect with us</h3>
+                        <div class="social-icons">
+                            <a href="#"><i class="fab fa-facebook-f"></i></a>
+                            <a href="#"><i class="fab fa-twitter"></i></a>
+                            <a href="#"><i class="fab fa-instagram"></i></a>
+                            <a href="#"><i class="fab fa-linkedin-in"></i></a>
+                            <a href="#"><i class="fab fa-github"></i></a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Contact Form -->
+                <div class="result-panel">
+                    <div class="result-header">
+                        <h2>Send us a Message</h2>
+                    </div>
+
+                    <div id="successMessage"
+                         style="display: none; background-color: rgba(16, 185, 129, 0.1); border: 1px solid var(--success); color: var(--success); padding: 1rem; border-radius: 0.5rem; margin-bottom: 1.5rem;">
+                        <i class="fas fa-check-circle" style="margin-right: 0.5rem;"></i>
+                        Thank you for your message! We'll get back to you soon.
+                    </div>
+
+                    <form id="contactForm" class="result-content" style="background-color: var(--white);">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+                            <div class="form-group">
+                                <label for="name" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Your
+                                    Name</label>
+                                <input type="text" id="name" name="name" required
+                                       style="width: 100%; padding: 0.875rem 1rem; border: 1px solid var(--medium-gray); border-radius: var(--border-radius); outline: none; transition: var(--transition);"
+                                       placeholder="John Doe">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="email" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Your
+                                    Email</label>
+                                <input type="email" id="email" name="email" required
+                                       style="width: 100%; padding: 0.875rem 1rem; border: 1px solid var(--medium-gray); border-radius: var(--border-radius); outline: none; transition: var(--transition);"
+                                       placeholder="john@example.com">
+                            </div>
+                        </div>
+
+                        <div class="form-group" style="margin-bottom: 1.5rem;">
+                            <label for="subject" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Subject</label>
+                            <input type="text" id="subject" name="subject" required
+                                   style="width: 100%; padding: 0.875rem 1rem; border: 1px solid var(--medium-gray); border-radius: var(--border-radius); outline: none; transition: var(--transition);"
+                                   placeholder="How can we help you?">
+                        </div>
+
+                        <div class="form-group" style="margin-bottom: 1.5rem;">
+                            <label for="message" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Message</label>
+                            <textarea id="message" name="message" required rows="6"
+                                      style="width: 100%; padding: 0.875rem 1rem; border: 1px solid var(--medium-gray); border-radius: var(--border-radius); outline: none; transition: var(--transition); resize: vertical;"
+                                      placeholder="Your message here..."></textarea>
+                        </div>
+
+                        <button type="submit" id="submitBtn" class="render-btn">
+                            <i class="fas fa-paper-plane"></i> Send Message
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Map Section -->
+            <div style="margin-top: 2rem; background-color: var(--white); border-radius: var(--border-radius-lg); box-shadow: var(--shadow-md); padding: 2rem; border: 1px solid var(--medium-gray);">
+                <h2 style="color: var(--primary-color); margin-bottom: 1.5rem;">Our Location</h2>
+                <div style="height: 400px; width: 100%; border-radius: var(--border-radius); overflow: hidden; border: 1px solid var(--medium-gray);">
+                    <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3833.8374229133!2d108.14731282541187!3d16.073924159920782!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x314218d691896bfb%3A0x4c23d47c7e67efea!2zNTQgTmd1eeG7hW4gTMawxqFuZyBC4bqxbmcsIEhvw6AgS2jDoW5oIELhuq9jLCBMacOqbiBDaGnhu4N1LCDEkMOgIE7hurVuZyA1NTAwMDAsIFZp4buHdCBOYW0!5e0!3m2!1svi!2s!4v1746952838581!5m2!1svi!2s"
+                            width="100%" height="100%" style="border:0;" allowfullscreen="" loading="lazy"
+                            referrerpolicy="no-referrer-when-downgrade"></iframe>
+                </div>
+            </div>
+
+            <!-- FAQ Section -->
+            <div style="margin-top: 3rem;">
+                <div style="text-align: center; margin-bottom: 2rem;">
+                    <h2 style="color: var(--primary-dark); font-size: 1.75rem; margin-bottom: 0.5rem;">Frequently Asked
+                        Questions</h2>
+                    <p style="color: var(--text-light);">Find answers to common questions about our handwriting
+                        recognition technology</p>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                    <div style="background-color: var(--white); border-radius: var(--border-radius-lg); box-shadow: var(--shadow-md); padding: 1.5rem; border: 1px solid var(--medium-gray); transition: var(--transition);">
+                        <h3 style="color: var(--primary-color); font-size: 1.25rem; margin-bottom: 0.75rem;">How
+                            accurate is your handwriting recognition?</h3>
+                        <p style="color: var(--text-light);">Our technology achieves over 95% accuracy for most
+                            handwriting styles. The accuracy may vary depending on the clarity and style of
+                            handwriting.</p>
+                    </div>
+
+                    <div style="background-color: var(--white); border-radius: var(--border-radius-lg); box-shadow: var(--shadow-md); padding: 1.5rem; border: 1px solid var(--medium-gray); transition: var(--transition);">
+                        <h3 style="color: var(--primary-color); font-size: 1.25rem; margin-bottom: 0.75rem;">What file
+                            formats do you support?</h3>
+                        <p style="color: var(--text-light);">We support common image formats including JPG, PNG, and others involved with image files containing scanned handwritten text.</p>
+                    </div>
+
+                    <div style="background-color: var(--white); border-radius: var(--border-radius-lg); box-shadow: var(--shadow-md); padding: 1.5rem; border: 1px solid var(--medium-gray); transition: var(--transition);">
+                        <h3 style="color: var(--primary-color); font-size: 1.25rem; margin-bottom: 0.75rem;">Is my data
+                            secure?</h3>
+                        <p style="color: var(--text-light);">Yes, we take data security seriously. All uploads are
+                            encrypted and we don't store your images or extracted text longer than necessary for
+                            processing.</p>
+                    </div>
+
+                    <div style="background-color: var(--white); border-radius: var(--border-radius-lg); box-shadow: var(--shadow-md); padding: 1.5rem; border: 1px solid var(--medium-gray); transition: var(--transition);">
+                        <h3 style="color: var(--primary-color); font-size: 1.25rem; margin-bottom: 0.75rem;">Do you
+                            offer an API for developers?</h3>
+                        <p style="color: var(--text-light);">Yes, we provide a RESTful API for developers who want to
+                            integrate our handwriting recognition technology into their applications. If you want it, contact us!</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const contactForm = document.getElementById('contactForm');
+            const successMessage = document.getElementById('successMessage');
+            const submitBtn = document.getElementById('submitBtn');
+
+            contactForm.addEventListener('submit', function (e) {
+                e.preventDefault();
+
+                // Change button text and disable it
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+                submitBtn.disabled = true;
+
+                // Simulate form submission with timeout
+                setTimeout(function () {
+                    // Show success message
+                    successMessage.style.display = 'block';
+
+                    // Reset form
+                    contactForm.reset();
+
+                    // Reset button
+                    submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Message';
+                    submitBtn.disabled = false;
+
+                    // Hide success message after 5 seconds
+                    setTimeout(function () {
+                        successMessage.style.display = 'none';
+                    }, 5000);
+                }, 1500);
+            });
+
+            // Add hover effects to FAQ cards
+            const faqCards = document.querySelectorAll('.container > div:last-child > div:last-child > div');
+            faqCards.forEach(card => {
+                card.addEventListener('mouseenter', function () {
+                    this.style.transform = 'translateY(-5px)';
+                    this.style.boxShadow = 'var(--shadow-lg)';
+                });
+
+                card.addEventListener('mouseleave', function () {
+                    this.style.transform = 'translateY(0)';
+                    this.style.boxShadow = 'var(--shadow-md)';
+                });
+            });
+        });
+    </script>
+{% endblock %}

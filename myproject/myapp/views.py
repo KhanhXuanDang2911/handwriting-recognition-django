@@ -1,3 +1,5 @@
+import traceback
+
 from django.shortcuts import render
 from rest_framework.views import APIView
 from rest_framework import status, viewsets, filters
@@ -14,7 +16,14 @@ from .utils import create_response, format_validation_errors
 from .permissions import IsAuthenticated, IsAdmin, AllowAny, IsOwnerOrAdmin, CanCreateHistory
 from .authentication import extract_token, validate_token
 from rest_framework.response import Response
-
+from django.http import HttpResponse, JsonResponse
+from gtts import gTTS
+import io
+import os
+import tempfile
+from pydub import AudioSegment
+import uuid
+import json  # Thêm dòng này
 
 # Frontend views
 def home(request):
@@ -43,6 +52,9 @@ def login(request):
 
 def register(request):
     return render(request, 'myapp/register.html')
+
+def contact(request):
+    return render(request, 'myapp/contact.html')
 
 
 # API Pagination
@@ -467,3 +479,142 @@ class HistoryViewSet(viewsets.ModelViewSet):
                 errors={"detail": [str(e)]},
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+
+def text_to_speech(request):
+    """
+    API endpoint để tạo file âm thanh từ văn bản
+
+    Tham số:
+    - text: Văn bản cần chuyển đổi thành âm thanh
+    - language: Ngôn ngữ (mặc định: 'vi')
+    """
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'Chỉ hỗ trợ phương thức POST'}, status=405)
+
+    try:
+        # Lấy dữ liệu từ request
+        # Kiểm tra cả request.POST và request.body
+        if request.POST:
+            text = request.POST.get('text', '')
+            language = request.POST.get('language', 'vi')
+        elif request.body:
+            try:
+                data = json.loads(request.body)
+                text = data.get('text', '')
+                language = data.get('language', 'vi')
+            except json.JSONDecodeError:
+                # Ghi log lỗi
+                print("Lỗi parse JSON từ request.body")
+                # Trả về lỗi
+                return JsonResponse({'status': 'error', 'message': 'Dữ liệu không hợp lệ'}, status=400)
+        else:
+            text = ''
+            language = 'vi'
+
+        if not text:
+            return JsonResponse({'status': 'error', 'message': 'Thiếu tham số text'}, status=400)
+
+        # Ghi log để debug
+        print(f"Xử lý yêu cầu TTS: độ dài text={len(text)}, ngôn ngữ={language}")
+
+        # Nếu văn bản ngắn, tạo file âm thanh trực tiếp
+        if len(text) <= 200:
+            tts = gTTS(text=text, lang=language, slow=False)
+            fp = io.BytesIO()
+            tts.write_to_fp(fp)
+            fp.seek(0)
+
+            # Trả về file âm thanh
+            response = HttpResponse(fp.read(), content_type='audio/mpeg')
+            response['Content-Disposition'] = f'attachment; filename="audio_{language}.mp3"'
+            return response
+
+        # Nếu văn bản dài, chia thành nhiều đoạn và ghép lại
+        chunks = split_text_into_chunks(text, 200)
+        print(f"Đã chia văn bản thành {len(chunks)} đoạn")
+
+        # Tạo thư mục tạm để lưu các file âm thanh
+        temp_dir = tempfile.mkdtemp()
+        temp_files = []
+
+        try:
+            # Tạo file âm thanh cho từng đoạn
+            for i, chunk in enumerate(chunks):
+                temp_file = os.path.join(temp_dir, f'chunk_{i}.mp3')
+                tts = gTTS(text=chunk, lang=language, slow=False)
+                tts.save(temp_file)
+                temp_files.append(temp_file)
+                print(f"Đã tạo đoạn {i+1}/{len(chunks)}")
+
+            # Ghép các file âm thanh lại với nhau
+            combined = AudioSegment.empty()
+            for temp_file in temp_files:
+                audio_segment = AudioSegment.from_mp3(temp_file)
+                combined += audio_segment
+
+            # Lưu file âm thanh đã ghép vào buffer
+            output = io.BytesIO()
+            combined.export(output, format='mp3')
+            output.seek(0)
+            print("Đã ghép các đoạn âm thanh thành công")
+
+            # Trả về file âm thanh đã ghép
+            response = HttpResponse(output.read(), content_type='audio/mpeg')
+            response['Content-Disposition'] = f'attachment; filename="audio_{language}.mp3"'
+            return response
+
+        finally:
+            # Xóa các file tạm
+            for temp_file in temp_files:
+                if os.path.exists(temp_file):
+                    os.remove(temp_file)
+            if os.path.exists(temp_dir):
+                os.rmdir(temp_dir)
+
+    except Exception as e:
+        # Ghi log chi tiết lỗi
+        error_details = traceback.format_exc()
+        print(f"Lỗi text-to-speech: {error_details}")
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+def split_text_into_chunks(text, max_length):
+    """
+    Chia văn bản thành các đoạn nhỏ, cố gắng cắt ở dấu câu hoặc khoảng trắng
+    """
+    chunks = []
+    start = 0
+
+    while start < len(text):
+        # Nếu phần còn lại của văn bản ngắn hơn max_length, lấy toàn bộ
+        if start + max_length >= len(text):
+            chunks.append(text[start:])
+            break
+
+        # Tìm vị trí cắt phù hợp (dấu câu hoặc khoảng trắng)
+        end = start + max_length
+        cut_position = end
+
+        # Ưu tiên cắt ở dấu câu
+        punctuation_marks = [".", "!", "?", ";", ":", ","]
+        for i in range(end, start, -1):
+            if i < len(text) and text[i] in punctuation_marks:
+                cut_position = i + 1  # Bao gồm cả dấu câu
+                break
+
+        # Nếu không tìm thấy dấu câu, cắt ở khoảng trắng
+        if cut_position == end:
+            for i in range(end, start, -1):
+                if i < len(text) and text[i] == " ":
+                    cut_position = i + 1  # Bao gồm cả khoảng trắng
+                    break
+
+        # Nếu không tìm thấy vị trí cắt phù hợp, cắt ở max_length
+        if cut_position == end and start != 0:
+            cut_position = end
+
+        chunks.append(text[start:cut_position])
+        start = cut_position
+
+    return chunks
