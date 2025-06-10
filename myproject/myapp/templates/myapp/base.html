@@ -6,12 +6,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-     <title>{% block title %}My app{% endblock %}</title>
+    <title>{% block title %}My app{% endblock %}</title>
     <link rel="stylesheet" href="{% static 'css/styles.css' %}">
     <link rel="stylesheet" href="{% static 'css/responsive_header_footer.css' %}">
     <link rel="stylesheet" href="{% static 'css/notifications.css' %}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
     <!-- Load notification.js first to ensure it's available for other scripts -->
     <script src="{% static 'js/notification.js' %}"></script>
     <script src="{% static 'js/auth.js' %}"></script>
@@ -39,7 +41,8 @@
                 <ul>
                     <li><a href="/profile/"><i class="fas fa-user"></i> Edit Profile</a></li>
                     <li><a href="/history/"><i class="fas fa-history"></i> Recognition History</a></li>
-                    <li class="admin-menu-item" style="display: none;"><a href="/myadmin/"><i class="fas fa-users-cog"></i> Admin Panel</a></li>
+                    <li class="admin-menu-item" style="display: none;"><a href="/myadmin/"><i
+                                class="fas fa-users-cog"></i> Admin Panel</a></li>
                     <li><a href="#" id="logout"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
                 </ul>
             </div>
@@ -47,9 +50,9 @@
     </header>
 
     <!-- Main Content -->
-        {% block content %}
-        <!-- Trang con sẽ chèn nội dung vào đây -->
-        {% endblock %}
+    {% block content %}
+    <!-- Trang con sẽ chèn nội dung vào đây -->
+    {% endblock %}
     <!-- Footer -->
     <footer>
         <div class="footer-content">

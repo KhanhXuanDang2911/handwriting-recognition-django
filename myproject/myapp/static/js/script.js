@@ -14,9 +14,26 @@ document.addEventListener("DOMContentLoaded", () => {
   const logoutBtn = document.getElementById("logout")
   const API_GEMINI_KEY = "AIzaSyCsnBXKdeauNWlz_KYhjjUn3f8o7ClOpT4"
   const hiddenGeminiBtn = document.getElementById("hiddenGeminiBtn")
+  const cameraModal = document.getElementById('cameraModal');
+  const cameraFeed = document.getElementById('cameraFeed');
+  const captureBtn = document.getElementById('captureBtn');
+  const closeCameraModal = document.getElementById('closeCameraModal');
+  const imageEditorModal = document.getElementById('imageEditorModal');
+  const editorImg = document.getElementById('editorImg');
+  const closeEditorModal = document.getElementById('closeEditorModal');
+  const brightnessControl = document.getElementById('brightness');
+  const contrastControl = document.getElementById('contrast');
+  const cropBtn = document.getElementById('cropBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const applyBtn = document.getElementById('applyBtn');
+  const modeBtns = document.querySelectorAll('.mode-btn');
 
-  // Add state variable for Gemini mode
-  let isGeminiMode = false
+  // Global variables
+  let stream = null;
+  let cropper = null;
+  let originalImage = null;
+  let currentMode = 'upload';
+  let isGeminiMode = false;
 
   // Fetch user profile to get avatar when page loads
   if (window.Auth) {
@@ -37,6 +54,81 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   })
 
+  // Image mode selection
+  modeBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      modeBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentMode = btn.dataset.mode;
+      
+      if (currentMode === 'camera') {
+        openCamera();
+      } else {
+        if (stream) {
+          stream.getTracks().forEach(track => track.stop());
+        }
+        cameraModal.style.display = 'none';
+      }
+    });
+  });
+
+  // Camera functionality
+  async function openCamera() {
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { 
+          facingMode: 'environment',
+          width: { ideal: 1920 },
+          height: { ideal: 1080 }
+        } 
+      });
+      cameraFeed.srcObject = stream;
+      cameraModal.style.display = 'block';
+    } catch (err) {
+      console.error('Error accessing camera:', err);
+      alert('Could not access camera. Please make sure you have granted camera permissions.');
+    }
+  }
+
+  closeCameraModal.addEventListener('click', () => {
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+    }
+    cameraModal.style.display = 'none';
+  });
+
+  captureBtn.addEventListener('click', () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = cameraFeed.videoWidth;
+    canvas.height = cameraFeed.videoHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(cameraFeed, 0, 0);
+    
+    canvas.toBlob((blob) => {
+      const file = new File([blob], 'camera-capture.jpg', { type: 'image/jpeg' });
+      handleImageUpload(file);
+    }, 'image/jpeg');
+    
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+    }
+    cameraModal.style.display = 'none';
+  });
+
+  // Handle image upload
+  function handleImageUpload(file) {
+    if (!file.type.match("image.*")) {
+      alert("Please select an image file");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      openImageEditor(e.target.result);
+    };
+    reader.readAsDataURL(file);
+  }
+
   // Handle image upload via click
   if (uploadArea) {
     uploadArea.addEventListener("click", () => {
@@ -46,22 +138,19 @@ document.addEventListener("DOMContentLoaded", () => {
     // Handle image upload via drag and drop
     uploadArea.addEventListener("dragover", (e) => {
       e.preventDefault()
-      uploadArea.style.borderColor = "var(--primary-color)"
-      uploadArea.style.backgroundColor = "rgba(67, 97, 238, 0.05)"
+      uploadArea.classList.add('dragover')
     })
 
     uploadArea.addEventListener("dragleave", () => {
-      uploadArea.style.borderColor = "var(--dark-gray)"
-      uploadArea.style.backgroundColor = "transparent"
+      uploadArea.classList.remove('dragover')
     })
 
     uploadArea.addEventListener("drop", (e) => {
       e.preventDefault()
-      uploadArea.style.borderColor = "var(--dark-gray)"
-      uploadArea.style.backgroundColor = "transparent"
+      uploadArea.classList.remove('dragover')
 
       if (e.dataTransfer.files.length) {
-        handleImageFile(e.dataTransfer.files[0])
+        handleImageUpload(e.dataTransfer.files[0])
       }
     })
   }
@@ -70,31 +159,101 @@ document.addEventListener("DOMContentLoaded", () => {
   if (imageUpload) {
     imageUpload.addEventListener("change", function () {
       if (this.files.length) {
-        handleImageFile(this.files[0])
+        handleImageUpload(this.files[0])
       }
     })
   }
 
-  // Handle image file
-  function handleImageFile(file) {
-    if (!file.type.match("image.*")) {
-      alert("Please select an image file")
-      return
-    }
-
-    const reader = new FileReader()
-
-    reader.onload = (e) => {
-      previewImg.src = e.target.result
-      uploadArea.style.display = "none"
-      imagePreview.style.display = "block"
-      renderBtn.disabled = false
-      // Reset result content when new image is uploaded
-      resetResult()
-    }
-
-    reader.readAsDataURL(file)
+  // Image Editor functions
+  function openImageEditor(imageSrc) {
+    originalImage = imageSrc;
+    editorImg.src = imageSrc;
+    imageEditorModal.style.display = 'block';
+    resetImageEditor();
   }
+
+  function resetImageEditor() {
+    brightnessControl.value = 100;
+    contrastControl.value = 100;
+    editorImg.style.filter = 'none';
+    if (cropper) {
+      cropper.destroy();
+      cropper = null;
+    }
+  }
+
+  function applyImageAdjustments() {
+    const brightness = brightnessControl.value;
+    const contrast = contrastControl.value;
+    editorImg.style.filter = `brightness(${brightness}%) contrast(${contrast}%)`;
+  }
+
+  // Image Editor event listeners
+  closeEditorModal.addEventListener('click', () => {
+    imageEditorModal.style.display = 'none';
+    if (cropper) {
+      cropper.destroy();
+      cropper = null;
+    }
+  });
+
+  brightnessControl.addEventListener('input', applyImageAdjustments);
+  contrastControl.addEventListener('input', applyImageAdjustments);
+
+  resetBtn.addEventListener('click', () => {
+    if (originalImage) {
+      editorImg.src = originalImage;
+      resetImageEditor();
+    }
+  });
+
+  cropBtn.addEventListener('click', () => {
+    if (cropper) {
+      cropper.destroy();
+    }
+    
+    cropper = new Cropper(editorImg, {
+      aspectRatio: NaN,
+      viewMode: 1,
+      dragMode: 'move',
+      autoCropArea: 1,
+      restore: false,
+      guides: true,
+      center: true,
+      highlight: false,
+      cropBoxMovable: true,
+      cropBoxResizable: true,
+      toggleDragModeOnDblclick: false,
+    });
+  });
+
+  applyBtn.addEventListener('click', () => {
+    let finalImage = editorImg.src;
+    
+    if (cropper) {
+      const canvas = cropper.getCroppedCanvas();
+      finalImage = canvas.toDataURL();
+      cropper.destroy();
+      cropper = null;
+    }
+    
+    // Update preview image
+    previewImg.src = finalImage;
+    uploadArea.style.display = "none";
+    imagePreview.style.display = "block";
+    renderBtn.disabled = false;
+    
+    // Convert data URL to File object
+    fetch(finalImage)
+      .then(res => res.blob())
+      .then(blob => {
+        const file = new File([blob], 'edited-image.jpg', { type: 'image/jpeg' });
+        // Store the file for form submission
+        window.currentImageFile = file;
+      });
+    
+    imageEditorModal.style.display = 'none';
+  });
 
   // Remove image
   if (removeImage) {
@@ -115,18 +274,187 @@ document.addEventListener("DOMContentLoaded", () => {
     })
   }
 
-  // Thêm nút tải xuống
+  // Add download button
   const downloadBtn = document.createElement("button")
   downloadBtn.className = "download-btn"
   downloadBtn.innerHTML = '<i class="fas fa-download"></i>'
   downloadBtn.disabled = true
   downloadBtn.style.marginLeft = "10px"
 
-  // Thêm nút tải xuống vào header
-  const resultHeader = document.querySelector(".result-header")
-  if (resultHeader) {
-    resultHeader.appendChild(downloadBtn)
+  // Add edit button to image preview
+  const editBtn = document.createElement("button");
+  editBtn.className = "edit-btn";
+  editBtn.innerHTML = '<i class="fas fa-edit"></i>';
+  editBtn.style.marginLeft = "10px";
+  editBtn.onclick = () => {
+    openImageEditor(previewImg.src);
+  };
+
+  // Add edit button next to remove button
+  if (removeImage && removeImage.parentNode) {
+    removeImage.parentNode.insertBefore(editBtn, removeImage.nextSibling);
   }
+
+  // Form submission
+  renderBtn.addEventListener('click', async () => {
+    try {
+      if (!window.currentImageFile) {
+        alert('Vui lòng chọn ảnh trước');
+        return;
+      }
+
+      // Show loading state
+      renderBtn.disabled = true;
+      renderBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang xử lý...';
+
+      if (isGeminiMode) {
+        console.log("Using Gemini Vision mode - sending image directly to Gemini")
+        // Direct Gemini Vision mode
+        const base64Image = previewImg.src.split(',')[1]
+        console.log("Image converted to base64, length:", base64Image.length)
+        
+        const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + API_GEMINI_KEY, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            contents: [{
+              parts: [
+                {
+                  text: "Extract and return only the text content from this image. Do not add any explanations or additional text."
+                },
+                {
+                  inline_data: {
+                    mime_type: "image/jpeg",
+                    data: base64Image
+                  }
+                }
+              ]
+            }],
+            generationConfig: {
+              temperature: 0.1,
+              topK: 32,
+              topP: 1,
+              maxOutputTokens: 2048,
+            },
+            safetySettings: [
+              {
+                category: "HARM_CATEGORY_HARASSMENT",
+                threshold: "BLOCK_MEDIUM_AND_ABOVE"
+              },
+              {
+                category: "HARM_CATEGORY_HATE_SPEECH",
+                threshold: "BLOCK_MEDIUM_AND_ABOVE"
+              },
+              {
+                category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                threshold: "BLOCK_MEDIUM_AND_ABOVE"
+              },
+              {
+                category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+                threshold: "BLOCK_MEDIUM_AND_ABOVE"
+              }
+            ]
+          })
+        })
+
+        console.log("Gemini API response status:", response.status)
+        
+        if (!response.ok) {
+          const errorText = await response.text()
+          console.error("Gemini API error:", errorText)
+          throw new Error(`Lỗi khi gọi Gemini API: ${response.status} - ${errorText}`)
+        }
+
+        const data = await response.json()
+        console.log("Gemini API response data:", data)
+        
+        if (data.candidates && data.candidates[0].content.parts[0].text) {
+          const recognizedText = data.candidates[0].content.parts[0].text
+          console.log("Recognized text from Gemini:", recognizedText)
+          resultContent.innerHTML = `<p>${recognizedText}</p>`
+          audioBtn.disabled = false
+          downloadBtn.disabled = false
+          
+          // Save to history
+          await saveRecognitionToHistory(previewImg.src, recognizedText)
+        } else {
+          console.error("Invalid Gemini API response:", data)
+          throw new Error('Không nhận được kết quả nhận dạng từ Gemini')
+        }
+      } else {
+        console.log("Using external API mode")
+        // Normal mode - use external API then Gemini for spell check
+        const recognizedText = await simulateTextRecognition()
+        console.log("External API recognition result:", recognizedText)
+
+        if (!recognizedText || recognizedText.length === 0) {
+          throw new Error("Không thể nhận diện văn bản từ hình ảnh")
+        }
+
+        console.log("Sending text to Gemini for spell check")
+        const response = await fetch(
+          "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" +
+          API_GEMINI_KEY,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              contents: [
+                {
+                  parts: [
+                    {
+                      text: `Tôi vừa OCR được đoạn văn sau:\n"${recognizedText}"\n, Xử lý ngôn ngữ tự nhiên, hãy sửa lại và trả về kết quả cho đúng chính tả, giữ nguyên thứ tự xuống dòng và cấu trúc đoạn văn, ngữ pháp và giữ nguyên ý nghĩa. 
+                                Lưu ý rằng, chỉ trả về kết quả là đoạn văn bản đã được xử lý, không cần gì thêm, vì kết quả đó là kết quả cuối cùng cho người dùng của tôi xem.`,
+                    },
+                  ],
+                },
+              ],
+            }),
+          },
+        )
+
+        if (!response.ok) {
+          throw new Error(`Lỗi khi xử lý văn bản: ${response.status}`)
+        }
+
+        const data = await response.json()
+        console.log("Gemini spell check response:", data)
+        
+        if (data.candidates && data.candidates[0].content.parts[0].text) {
+          const fixedText = data.candidates[0].content.parts[0].text
+          resultContent.innerHTML = `<p>${fixedText}</p>`
+          audioBtn.disabled = false
+          downloadBtn.disabled = false
+
+          // Save to history
+          await saveRecognitionToHistory(previewImg.src, fixedText)
+        } else {
+          throw new Error('Không nhận được kết quả xử lý từ Gemini')
+        }
+      }
+    } catch (error) {
+      console.error("Lỗi khi xử lý nhận diện:", error)
+      resultContent.innerHTML = `<p class="error">Lỗi: ${error.message}</p>`
+      // Ensure buttons stay disabled on error
+      audioBtn.disabled = true
+      downloadBtn.disabled = true
+    } finally {
+      // Reset button state
+      renderBtn.disabled = false;
+      renderBtn.innerHTML = 'Nhận dạng văn bản';
+    }
+  });
+
+  // Gemini mode toggle
+  hiddenGeminiBtn.addEventListener('click', function() {
+    isGeminiMode = !isGeminiMode;
+    this.style.backgroundColor = isGeminiMode ? "#4CAF50" : "#f44336";
+    this.style.cursor = isGeminiMode ? "default" : "pointer";
+  });
 
   // Text-to-speech functionality
   if (audioBtn) {
@@ -377,180 +705,6 @@ document.addEventListener("DOMContentLoaded", () => {
         speakText(resultContent.textContent, lang)
         audioDropdown.classList.remove("active")
       })
-    })
-  }
-
-  // Handle image recognition
-  if (renderBtn) {
-    renderBtn.addEventListener("click", async () => {
-      // Show loading state
-      resultContent.innerHTML = '<p class="placeholder-text">Processing image...</p>'
-
-      try {
-        // Disable buttons during processing
-        renderBtn.disabled = true
-        audioBtn.disabled = true
-        downloadBtn.disabled = true
-
-        // Check if image is selected
-        if (!previewImg.src || previewImg.src === "/placeholder.svg") {
-          throw new Error("Vui lòng chọn ảnh trước")
-        }
-
-        console.log("Current Gemini mode:", isGeminiMode)
-
-        if (isGeminiMode) {
-          console.log("Using Gemini Vision mode - sending image directly to Gemini")
-          // Direct Gemini Vision mode
-          const base64Image = previewImg.src.split(',')[1]
-          console.log("Image converted to base64, length:", base64Image.length)
-          
-          const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + API_GEMINI_KEY, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              contents: [{
-                parts: [
-                  {
-                    text: "Extract and return only the text content from this image. Do not add any explanations or additional text."
-                  },
-                  {
-                    inline_data: {
-                      mime_type: "image/jpeg",
-                      data: base64Image
-                    }
-                  }
-                ]
-              }],
-              generationConfig: {
-                temperature: 0.1,
-                topK: 32,
-                topP: 1,
-                maxOutputTokens: 2048,
-              },
-              safetySettings: [
-                {
-                  category: "HARM_CATEGORY_HARASSMENT",
-                  threshold: "BLOCK_MEDIUM_AND_ABOVE"
-                },
-                {
-                  category: "HARM_CATEGORY_HATE_SPEECH",
-                  threshold: "BLOCK_MEDIUM_AND_ABOVE"
-                },
-                {
-                  category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-                  threshold: "BLOCK_MEDIUM_AND_ABOVE"
-                },
-                {
-                  category: "HARM_CATEGORY_DANGEROUS_CONTENT",
-                  threshold: "BLOCK_MEDIUM_AND_ABOVE"
-                }
-              ]
-            })
-          })
-
-          console.log("Gemini API response status:", response.status)
-          
-          if (!response.ok) {
-            const errorText = await response.text()
-            console.error("Gemini API error:", errorText)
-            throw new Error(`Lỗi khi gọi Gemini API: ${response.status} - ${errorText}`)
-          }
-
-          const data = await response.json()
-          console.log("Gemini API response data:", data)
-          
-          if (data.candidates && data.candidates[0].content.parts[0].text) {
-            const recognizedText = data.candidates[0].content.parts[0].text
-            console.log("Recognized text from Gemini:", recognizedText)
-            resultContent.innerHTML = `<p>${recognizedText}</p>`
-            audioBtn.disabled = false
-            downloadBtn.disabled = false
-            
-            // Save to history
-            await saveRecognitionToHistory(previewImg.src, recognizedText)
-          } else {
-            console.error("Invalid Gemini API response:", data)
-            throw new Error('Không nhận được kết quả nhận dạng từ Gemini')
-          }
-        } else {
-          console.log("Using external API mode")
-          // Normal mode - use external API then Gemini for spell check
-          const recognizedText = await simulateTextRecognition()
-          console.log("External API recognition result:", recognizedText)
-          
-          if (!recognizedText || recognizedText.length === 0) {
-            throw new Error("Không thể nhận diện văn bản từ hình ảnh")
-          }
-
-          const textOfficial = Array.isArray(recognizedText)
-            ? recognizedText.reduce((text, item) => text + item + "\n", "")
-            : recognizedText
-
-          console.log("Sending text to Gemini for spell check")
-          const response = await fetch(
-            "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" +
-              API_GEMINI_KEY,
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                contents: [
-                  {
-                    parts: [
-                      {
-                        text: `Tôi vừa OCR được đoạn văn sau:\n"${textOfficial}"\n, Xử lý ngôn ngữ tự nhiên, hãy sửa lại và trả về kết quả cho đúng chính tả, giữ nguyên thứ tự xuống dòng và cấu trúc đoạn văn, ngữ pháp và giữ nguyên ý nghĩa. 
-                                Lưu ý rằng, chỉ trả về kết quả là đoạn văn bản đã được xử lý, không cần gì thêm, vì kết quả đó là kết quả cuối cùng cho người dùng của tôi xem.`,
-                      },
-                    ],
-                  },
-                ],
-              }),
-            },
-          )
-
-          if (!response.ok) {
-            throw new Error(`Lỗi khi xử lý văn bản: ${response.status}`)
-          }
-
-          const data = await response.json()
-          console.log("Gemini spell check response:", data)
-          
-          if (data.candidates && data.candidates[0].content.parts[0].text) {
-            const fixedText = data.candidates[0].content.parts[0].text
-            resultContent.innerHTML = `<p>${fixedText}</p>`
-            audioBtn.disabled = false
-            downloadBtn.disabled = false
-            
-            // Save to history
-            await saveRecognitionToHistory(previewImg.src, fixedText)
-          } else {
-            throw new Error('Không nhận được kết quả xử lý từ Gemini')
-          }
-        }
-      } catch (error) {
-        console.error("Lỗi khi xử lý nhận diện:", error)
-        resultContent.innerHTML = `<p class="error">Lỗi: ${error.message}</p>`
-        // Ensure buttons stay disabled on error
-        audioBtn.disabled = true
-        downloadBtn.disabled = true
-      } finally {
-        renderBtn.disabled = false
-      }
-    })
-  }
-
-  // Thêm sự kiện click cho nút tải xuống
-  if (downloadBtn) {
-    downloadBtn.addEventListener("click", () => {
-      const text = resultContent.textContent
-      if (text && !text.includes("Recognition results will appear here")) {
-        showTranslationModal(text)
-      }
     })
   }
 
@@ -1141,35 +1295,35 @@ document.addEventListener("DOMContentLoaded", () => {
     return Number.parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + " " + sizes[i]
   }
 
+  // Thêm biến API_URL ở đầu file, sau các biến khác
+  const API_URL = 'http://127.0.0.1:7000/predict';
+
   // Gọi API nhận diện văn bản thực tế
   async function simulateTextRecognition() {
-    const fileInput = document.getElementById("imageUpload")
-    if (!fileInput || !fileInput.files || !fileInput.files[0]) {
-      throw new Error("Vui lòng chọn ảnh trước")
-    }
-
-    const formData = new FormData()
-    formData.append("file", fileInput.files[0])
-
     try {
-      // Thay đổi URL API tùy theo cấu hình thực tế của bạn
-      const response = await fetch("http://192.168.1.233:8000/predict", {
-        method: "POST",
-        body: formData,
-      })
-
+      const formData = new FormData();
+      formData.append('file', window.currentImageFile);
+      
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        body: formData
+      });
+      
       if (!response.ok) {
-        throw new Error(`Lỗi khi nhận dạng: ${response.status}`)
+        throw new Error('Network response was not ok');
       }
-
-      const result = await response.json()
-      if (!result.texts || result.texts.length === 0) {
-        throw new Error("Không nhận được kết quả nhận dạng")
+      
+      const data = await response.json();
+      if (data.texts && Array.isArray(data.texts)) {
+        // Ghép các dòng text lại với nhau
+        const combinedText = data.texts.join('\n');
+        return combinedText;
+      } else {
+        throw new Error('Không nhận được kết quả nhận dạng');
       }
-      return result.texts
     } catch (error) {
-      console.error("Error during the fetch:", error)
-      throw error
+      console.error('Error:', error);
+      throw error;
     }
   }
 

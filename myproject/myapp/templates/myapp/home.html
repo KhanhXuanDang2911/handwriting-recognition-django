@@ -9,7 +9,15 @@
         <div class="recognition-panel">
             <div class="upload-section">
                 <h2>Upload Image</h2>
-                <div class="upload-area" id="uploadArea" style="margin-top: 49px">
+                <div class="image-mode-selector">
+                    <button class="mode-btn active" data-mode="upload">
+                        <i class="fas fa-upload"></i> Upload Image
+                    </button>
+                    <button class="mode-btn" data-mode="camera">
+                        <i class="fas fa-camera"></i> Use Camera
+                    </button>
+                </div>
+                <div class="upload-area" id="uploadArea">
                     <i class="fas fa-cloud-upload-alt"></i>
                     <p>Drag & Drop image or click to browse</p>
                     <input type="file" id="imageUpload" accept="image/*" hidden>
@@ -32,6 +40,59 @@
         </div>
     </div>
 </main>
+
+<!-- Camera Modal -->
+<div class="modal" id="cameraModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Take Photo</h3>
+            <button class="close-modal" id="closeCameraModal">&times;</button>
+        </div>
+        <div class="modal-body">
+            <video id="cameraFeed" autoplay playsinline></video>
+            <button id="captureBtn" class="action-btn">Capture</button>
+        </div>
+    </div>
+</div>
+
+<!-- Image Editor Modal -->
+<div class="modal" id="imageEditorModal">
+    <div class="modal-content large">
+        <div class="modal-header">
+            <h3>Edit Image</h3>
+            <button class="close-modal" id="closeEditorModal">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="editor-container">
+                <div class="image-container">
+                    <img id="editorImg" src="" alt="Image to edit">
+                </div>
+                <div class="editor-controls">
+                    <div class="control-group">
+                        <label for="brightness">Brightness</label>
+                        <input type="range" id="brightness" min="0" max="200" value="100">
+                    </div>
+                    <div class="control-group">
+                        <label for="contrast">Contrast</label>
+                        <input type="range" id="contrast" min="0" max="200" value="100">
+                    </div>
+                    <div class="button-group">
+                        <button class="action-btn" id="cropBtn">
+                            <i class="fas fa-crop"></i> Crop
+                        </button>
+                        <button class="action-btn" id="resetBtn">
+                            <i class="fas fa-undo"></i> Reset
+                        </button>
+                        <button class="action-btn primary" id="applyBtn">
+                            <i class="fas fa-check"></i> Apply Changes
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div id="hiddenGeminiBtn" class="hidden-gemini-btn" style="display: none;"></div>
 <script src="{% static 'js/script.js' %}"></script>
 {% endblock %}
