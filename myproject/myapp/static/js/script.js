@@ -21,17 +21,176 @@ document.addEventListener("DOMContentLoaded", () => {
   const imageEditorModal = document.getElementById('imageEditorModal');
   const editorImg = document.getElementById('editorImg');
   const closeEditorModal = document.getElementById('closeEditorModal');
-  const brightnessControl = document.getElementById('brightness');
-  const contrastControl = document.getElementById('contrast');
   const cropBtn = document.getElementById('cropBtn');
   const resetBtn = document.getElementById('resetBtn');
   const applyBtn = document.getElementById('applyBtn');
   const modeBtns = document.querySelectorAll('.mode-btn');
 
+  // NEW: Ensure image editor modal is hidden by default on load
+  imageEditorModal.style.display = 'none';
+
+  // NEW: Create Rotate buttons dynamically - REMOVED since now in HTML
+  // const rotateLeftBtn = document.createElement("button");
+  // rotateLeftBtn.id = "rotateLeftBtn";
+  // rotateLeftBtn.className = "translation-btn";
+  // rotateLeftBtn.innerHTML = '<i class="fas fa-undo"></i> Xoay trái 90 độ';
+
+  // const rotateRightBtn = document.createElement("button");
+  // rotateRightBtn.id = "rotateRightBtn";
+  // rotateRightBtn.className = "translation-btn";
+  // rotateRightBtn.innerHTML = '<i class="fas fa-redo"></i> Xoay phải 90 độ';
+
+  // Find the parent of cropBtn and insert rotate buttons - REMOVED
+  // if (cropBtn && cropBtn.parentNode) {
+  //   const editorButtonContainer = cropBtn.parentNode;
+  //   editorButtonContainer.insertBefore(rotateLeftBtn, cropBtn.nextSibling);
+  //   editorButtonContainer.insertBefore(rotateRightBtn, rotateLeftBtn.nextSibling);
+  // }
+
+  // NEW: Add styles for image editor modal to handle overflow and image scaling
+  const imageEditorModalStyle = document.createElement("style");
+  imageEditorModalStyle.textContent = `
+    #imageEditorModal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.7); /* Dark overlay */
+      display: flex; /* Use flexbox for centering */
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      padding: 10px; /* Padding around the content */
+      box-sizing: border-box; /* Include padding in dimensions */
+      overflow-y: auto; /* Allow the modal itself to scroll if it's too tall */
+    }
+
+    #imageEditorModal .modal-content.large {
+      display: flex;
+      flex-direction: column;
+      max-height: 95vh; /* Allow it to take more height on smaller screens if needed */
+      width: 90%; /* Max width for the modal */
+      max-width: 600px; /* Limit overall modal width */
+      background-color: #fff;
+      border-radius: 8px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+      overflow: hidden; /* Hide overflow of the content itself, modal-body handles scroll */
+    }
+
+    #imageEditorModal .modal-header {
+        padding: 15px;
+        border-bottom: 1px solid #eee;
+        flex-shrink: 0; /* Don't shrink */
+    }
+
+    #imageEditorModal .modal-body {
+        flex-grow: 1; /* Allow modal-body to take available space */
+        overflow-y: auto; /* Enable scrolling for the content within modal-body */
+        padding: 15px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    #imageEditorModal .editor-container {
+        flex-grow: 1; /* Editor container should take available space in modal-body */
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        max-width: 100%;
+        overflow-y: auto; /* This is where the image and cropper will scroll */
+    }
+
+    #imageEditorModal .image-container {
+        flex-shrink: 0; /* Don't shrink the image container */
+        max-width: 100%;
+        max-height: 100%; /* Important: Constrain image container height relative to editor-container */
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin-bottom: 10px; /* Space between image and controls */
+        overflow: hidden; /* Hide potential overflow from the image itself */
+    }
+
+    #editorImg {
+      display: block; /* Required by Cropper.js */
+      max-width: 100%; /* Ensure image fits container */
+      height: auto; /* Maintain aspect ratio */
+    }
+
+    /* Ensure Cropper's canvas and view box respect the container */
+    .cropper-canvas, .cropper-view-box {
+      max-width: 100%;
+      max-height: 100%;
+    }
+
+    /* Add styles for controls container */
+    .editor-controls {
+      width: 100%;
+      padding: 10px;
+      background: #fff;
+      border-top: 1px solid #eee;
+      position: sticky;
+      bottom: 0;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      flex-shrink: 0; /* Don't shrink */
+    }
+
+    .editor-controls-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .editor-controls-row button {
+      flex: 1;
+      min-width: 120px;
+      max-width: 200px;
+      padding: 8px 15px;
+      border: none;
+      border-radius: 4px;
+      background: #4CAF50;
+      color: white;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      transition: background-color 0.2s;
+    }
+
+    .editor-controls-row button:hover {
+      background: #45a049;
+    }
+
+    .editor-controls-row button i {
+      font-size: 14px;
+    }
+
+    @media (max-width: 768px) {
+      #imageEditorModal .modal-content.large {
+        width: 95%;
+      }
+
+      .editor-controls-row button {
+        min-width: 100px;
+        padding: 6px 12px;
+        font-size: 14px;
+      }
+    }
+  `;
+  document.head.appendChild(imageEditorModalStyle);
+
   // Global variables
   let stream = null;
   let cropper = null;
   let originalImage = null;
+  let currentRotationAngle = 0; // NEW: Global variable to track total rotation
   let currentMode = 'upload';
   let isGeminiMode = false;
 
@@ -166,26 +325,82 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Image Editor functions
   function openImageEditor(imageSrc) {
-    originalImage = imageSrc;
-    editorImg.src = imageSrc;
+    originalImage = imageSrc; // Store the original image
+    currentRotationAngle = 0; // Reset rotation when a new image is opened
+    
+    editorImg.src = imageSrc; // Set initial image for display
     imageEditorModal.style.display = 'block';
-    resetImageEditor();
+    
+    // Initial render of the image (without rotation) and cropper setup
+    renderRotatedImage(); 
   }
 
-  function resetImageEditor() {
-    brightnessControl.value = 100;
-    contrastControl.value = 100;
-    editorImg.style.filter = 'none';
+  // NEW: Helper function to render the image with current total rotation
+  async function renderRotatedImage() {
+    if (!originalImage) return;
+
     if (cropper) {
       cropper.destroy();
       cropper = null;
     }
-  }
 
-  function applyImageAdjustments() {
-    const brightness = brightnessControl.value;
-    const contrast = contrastControl.value;
-    editorImg.style.filter = `brightness(${brightness}%) contrast(${contrast}%)`;
+    const img = new Image();
+    img.src = originalImage;
+    
+    await new Promise(resolve => {
+      img.onload = () => {
+        resolve();
+      };
+      img.onerror = (e) => {
+        console.error("Error loading image for rotation:", e);
+        resolve();
+      };
+    });
+
+    if (!img.complete || img.naturalWidth === 0) {
+      console.error("Failed to load image for rotation or image is empty.");
+      return;
+    }
+
+    const tempCanvas = document.createElement('canvas');
+    const ctx = tempCanvas.getContext('2d');
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+
+    const radians = currentRotationAngle * Math.PI / 180;
+    const cos = Math.cos(radians);
+    const sin = Math.sin(radians);
+
+    const rotatedWidth = Math.abs(img.width * cos) + Math.abs(img.height * sin);
+    const rotatedHeight = Math.abs(img.width * sin) + Math.abs(img.height * cos);
+
+    tempCanvas.width = rotatedWidth;
+    tempCanvas.height = rotatedHeight;
+
+    ctx.translate(rotatedWidth / 2, rotatedHeight / 2);
+    ctx.rotate(radians);
+    ctx.drawImage(img, -img.width / 2, -img.height / 2);
+
+    editorImg.src = tempCanvas.toDataURL('image/png');
+
+    // Re-initialize cropper with the newly drawn, physically rotated image
+    cropper = new Cropper(editorImg, {
+      aspectRatio: NaN,
+      viewMode: 1,
+      dragMode: 'move',
+      autoCropArea: 0.8, // Reduce crop box size to 80% of the image
+      restore: false,
+      guides: true,
+      center: true,
+      highlight: false,
+      cropBoxMovable: true,
+      cropBoxResizable: true,
+      toggleDragModeOnDblclick: false,
+      minContainerWidth: 200,
+      minContainerHeight: 200,
+      responsive: true,
+      checkCrossOrigin: false,
+    });
   }
 
   // Image Editor event listeners
@@ -195,65 +410,111 @@ document.addEventListener("DOMContentLoaded", () => {
       cropper.destroy();
       cropper = null;
     }
+    // Clear the file input value when closing the editor without applying
+    if (imageUpload) {
+      imageUpload.value = "";
+    }
+    // Also reset rotation angle and original image
+    currentRotationAngle = 0;
+    originalImage = null; // Clear original image data
   });
 
-  brightnessControl.addEventListener('input', applyImageAdjustments);
-  contrastControl.addEventListener('input', applyImageAdjustments);
+  // Get editor buttons for event listeners (they are now static in HTML)
+  const cropBtnEditor = document.querySelector('#imageEditorModal #cropBtn');
+  const rotateLeftBtnEditor = document.querySelector('#imageEditorModal #rotateLeftBtn');
+  const rotateRightBtnEditor = document.querySelector('#imageEditorModal #rotateRightBtn');
+  const resetBtnEditor = document.querySelector('#imageEditorModal #resetBtn');
+  const applyBtnEditor = document.querySelector('#imageEditorModal #applyBtn');
 
-  resetBtn.addEventListener('click', () => {
-    if (originalImage) {
-      editorImg.src = originalImage;
-      resetImageEditor();
-    }
-  });
-
-  cropBtn.addEventListener('click', () => {
-    if (cropper) {
-      cropper.destroy();
-    }
-    
-    cropper = new Cropper(editorImg, {
-      aspectRatio: NaN,
-      viewMode: 1,
-      dragMode: 'move',
-      autoCropArea: 1,
-      restore: false,
-      guides: true,
-      center: true,
-      highlight: false,
-      cropBoxMovable: true,
-      cropBoxResizable: true,
-      toggleDragModeOnDblclick: false,
+  // Add event listeners for the editor buttons
+  if (cropBtnEditor) {
+    cropBtnEditor.addEventListener('click', () => {
+      if (cropper) {
+        cropper.setDragMode('crop');
+      }
     });
-  });
+  }
 
-  applyBtn.addEventListener('click', () => {
-    let finalImage = editorImg.src;
-    
-    if (cropper) {
-      const canvas = cropper.getCroppedCanvas();
-      finalImage = canvas.toDataURL();
-      cropper.destroy();
-      cropper = null;
-    }
-    
-    // Update preview image
-    previewImg.src = finalImage;
-    uploadArea.style.display = "none";
-    imagePreview.style.display = "block";
-    renderBtn.disabled = false;
-    
-    // Convert data URL to File object
-    fetch(finalImage)
-      .then(res => res.blob())
-      .then(blob => {
-        const file = new File([blob], 'edited-image.jpg', { type: 'image/jpeg' });
-        // Store the file for form submission
-        window.currentImageFile = file;
-      });
-    
-    imageEditorModal.style.display = 'none';
-  });
+  if (rotateLeftBtnEditor) {
+    rotateLeftBtnEditor.addEventListener('click', () => {
+      if (cropper) {
+        currentRotationAngle -= 90;
+        renderRotatedImage();
+      }
+    });
+  }
+
+  if (rotateRightBtnEditor) {
+    rotateRightBtnEditor.addEventListener('click', () => {
+      if (cropper) {
+        currentRotationAngle += 90;
+        renderRotatedImage();
+      }
+    });
+  }
+
+  if (resetBtnEditor) {
+    resetBtnEditor.addEventListener('click', () => {
+      if (originalImage) {
+        currentRotationAngle = 0; // Reset rotation angle
+        renderRotatedImage(); // Re-render with original image and 0 rotation
+      }
+    });
+  }
+
+  if (applyBtnEditor) {
+    applyBtnEditor.addEventListener('click', async () => {
+      let finalImage = editorImg.src;
+      
+      if (cropper) {
+        const canvas = cropper.getCroppedCanvas({
+          imageSmoothingEnabled: true,
+          imageSmoothingQuality: 'high',
+          maxWidth: 4096, 
+          maxHeight: 4096,
+          fillColor: '#fff',
+          imageSmoothingEnabled: true,
+          imageSmoothingQuality: 'high'
+        });
+
+        const tempCanvas = document.createElement('canvas');
+        const ctx = tempCanvas.getContext('2d', { alpha: false });
+        
+        tempCanvas.width = canvas.width;
+        tempCanvas.height = canvas.height;
+        
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(canvas, 0, 0);
+        
+        finalImage = tempCanvas.toDataURL('image/png', 1.0);
+        
+        cropper.destroy();
+        cropper = null;
+      }
+      
+      // Update preview image
+      previewImg.src = finalImage;
+      uploadArea.style.display = "none";
+      imagePreview.style.display = "block";
+      renderBtn.disabled = false;
+      
+      // Convert data URL to File object
+      fetch(finalImage)
+        .then(res => res.blob())
+        .then(blob => {
+          const file = new File([blob], 'edited-image.png', { type: 'image/png' });
+          // Store the file for form submission
+          window.currentImageFile = file;
+        });
+      
+      imageEditorModal.style.display = 'none';
+      
+      // Reset rotation angle and original image after applying
+      currentRotationAngle = 0;
+      originalImage = null;
+    });
+  }
 
   // Remove image
   if (removeImage) {
@@ -280,19 +541,71 @@ document.addEventListener("DOMContentLoaded", () => {
   downloadBtn.innerHTML = '<i class="fas fa-download"></i>'
   downloadBtn.disabled = true
   downloadBtn.style.marginLeft = "10px"
+  downloadBtn.style.display = "inline-block"; // Ensure the button is visible
+
+  // Add event listener for the download button
+  downloadBtn.addEventListener("click", () => {
+    // Pass the current recognized text to the translation modal
+    showTranslationModal(resultContent.textContent);
+  });
+
+  // Insert downloadBtn into the DOM (e.g., in the result-header)
+  const resultHeader = document.querySelector(".result-header");
+  const audioBtnElement = document.getElementById("audioBtn"); // Get the actual audio button element
+  if (resultHeader && audioBtnElement) {
+    resultHeader.insertBefore(downloadBtn, audioBtnElement.nextSibling); // Insert downloadBtn after audioBtn
+  } else if (resultHeader) {
+    resultHeader.appendChild(downloadBtn); // Fallback: just append if audioBtn not found or not in resultHeader
+  }
 
   // Add edit button to image preview
   const editBtn = document.createElement("button");
   editBtn.className = "edit-btn";
-  editBtn.innerHTML = '<i class="fas fa-edit"></i>';
-  editBtn.style.marginLeft = "10px";
+  editBtn.innerHTML = '<i class="fas fa-edit"></i> Chỉnh sửa ảnh';
+  editBtn.style.width = "100%";
+  editBtn.style.marginTop = "10px";
+  editBtn.style.backgroundColor = "#4CAF50";
+  editBtn.style.color = "white";
+  editBtn.style.border = "none";
+  editBtn.style.padding = "10px";
+  editBtn.style.borderRadius = "5px";
+  editBtn.style.cursor = "pointer";
+  editBtn.style.display = "none";
   editBtn.onclick = () => {
     openImageEditor(previewImg.src);
   };
 
-  // Add edit button next to remove button
-  if (removeImage && removeImage.parentNode) {
-    removeImage.parentNode.insertBefore(editBtn, removeImage.nextSibling);
+  // Add edit button after render button
+  if (renderBtn && renderBtn.parentNode) {
+    renderBtn.parentNode.insertBefore(editBtn, renderBtn.nextSibling);
+  }
+
+  // Show edit button when image is uploaded
+  if (imageUpload) {
+    imageUpload.addEventListener("change", function () {
+      if (this.files.length) {
+        editBtn.style.display = "block";
+      }
+    });
+  }
+
+  // Show edit button when image is dropped
+  if (uploadArea) {
+    uploadArea.addEventListener("drop", (e) => {
+      e.preventDefault();
+      uploadArea.classList.remove("dragover");
+      if (e.dataTransfer.files.length) {
+        editBtn.style.display = "block";
+      }
+    });
+  }
+
+  // Hide edit button when image is removed
+  if (removeImage) {
+    removeImage.addEventListener("click", () => {
+      editBtn.style.display = "none";
+      // ... existing code ...
+    });
   }
 
   // Form submission
@@ -364,7 +677,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!response.ok) {
           const errorText = await response.text()
           console.error("Gemini API error:", errorText)
-          throw new Error(`Lỗi khi gọi Gemini API: ${response.status} - ${errorText}`)
+          throw new Error(`Lỗi khi xử lý ảnh: ${response.status} - ${errorText}`)
         }
 
         const data = await response.json()
@@ -372,7 +685,7 @@ document.addEventListener("DOMContentLoaded", () => {
         
         if (data.candidates && data.candidates[0].content.parts[0].text) {
           const recognizedText = data.candidates[0].content.parts[0].text
-          console.log("Recognized text from Gemini:", recognizedText)
+          console.log("Recognized text from Recognition API:", recognizedText)
           resultContent.innerHTML = `<p>${recognizedText}</p>`
           audioBtn.disabled = false
           downloadBtn.disabled = false
@@ -381,7 +694,7 @@ document.addEventListener("DOMContentLoaded", () => {
           await saveRecognitionToHistory(previewImg.src, recognizedText)
         } else {
           console.error("Invalid Gemini API response:", data)
-          throw new Error('Không nhận được kết quả nhận dạng từ Gemini')
+          throw new Error('Không nhận được kết quả nhận dạng')
         }
       } else {
         console.log("Using external API mode")
@@ -433,7 +746,7 @@ document.addEventListener("DOMContentLoaded", () => {
           // Save to history
           await saveRecognitionToHistory(previewImg.src, fixedText)
         } else {
-          throw new Error('Không nhận được kết quả xử lý từ Gemini')
+          throw new Error('Không nhận được kết quả xử lý')
         }
       }
     } catch (error) {
@@ -1295,8 +1608,9 @@ document.addEventListener("DOMContentLoaded", () => {
     return Number.parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + " " + sizes[i]
   }
 
-  // Thêm biến API_URL ở đầu file, sau các biến khác
-  const API_URL = 'http://127.0.0.1:7000/predict';
+  // Thay đổi API_URL để sử dụng địa chỉ gốc của trang web hiện tại
+  // Điều này đảm bảo rằng các yêu cầu API được gửi đến đúng server
+  const API_URL = `${window.location.protocol}//${window.location.hostname}:7000/predict`;
 
   // Gọi API nhận diện văn bản thực tế
   async function simulateTextRecognition() {
@@ -1368,6 +1682,26 @@ document.addEventListener("DOMContentLoaded", () => {
   if (hiddenGeminiBtn) {
     hiddenGeminiBtn.style.cursor = "default"
   }
+
+  // Variable to store the last tap time for double-tap detection
+  let lastTapTime = 0;
+
+  // Handle double-tap to toggle Gemini mode for touch devices
+  document.addEventListener('touchstart', (event) => {
+    const currentTime = new Date().getTime();
+    const tapLength = currentTime - lastTapTime;
+
+    // Check if it's a double tap (e.g., within 300ms)
+    if (tapLength < 300 && tapLength > 0) {
+      event.preventDefault(); // Prevent zooming or other default touch actions
+      isGeminiMode = !isGeminiMode;
+      hiddenGeminiBtn.classList.toggle('active');
+      console.log("Gemini mode changed to (double-tap):", isGeminiMode);
+      lastTapTime = 0; // Reset last tap time after a double tap
+    } else {
+      lastTapTime = currentTime;
+    }
+  });
 })
 
 // Lưu kết quả nhận diện vào lịch sử

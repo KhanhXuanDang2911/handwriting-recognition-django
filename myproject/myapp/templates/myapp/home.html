@@ -68,18 +68,18 @@
                     <img id="editorImg" src="" alt="Image to edit">
                 </div>
                 <div class="editor-controls">
-                    <div class="control-group">
-                        <label for="brightness">Brightness</label>
-                        <input type="range" id="brightness" min="0" max="200" value="100">
-                    </div>
-                    <div class="control-group">
-                        <label for="contrast">Contrast</label>
-                        <input type="range" id="contrast" min="0" max="200" value="100">
-                    </div>
-                    <div class="button-group">
+                    <div class="editor-controls-row">
                         <button class="action-btn" id="cropBtn">
                             <i class="fas fa-crop"></i> Crop
                         </button>
+                        <button class="action-btn" id="rotateLeftBtn">
+                            <i class="fas fa-undo"></i> Rotate Left
+                        </button>
+                        <button class="action-btn" id="rotateRightBtn">
+                            <i class="fas fa-redo"></i> Rotate Right
+                        </button>
+                    </div>
+                    <div class="editor-controls-row">
                         <button class="action-btn" id="resetBtn">
                             <i class="fas fa-undo"></i> Reset
                         </button>
