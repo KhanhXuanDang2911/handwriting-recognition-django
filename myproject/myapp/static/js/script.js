@@ -8,10 +8,15 @@ document.addEventListener("DOMContentLoaded", () => {
   const previewImg = document.getElementById("previewImg")
   const removeImage = document.getElementById("removeImage")
   const renderBtn = document.getElementById("renderBtn")
+  const geminiBtn = document.getElementById("geminiBtn")
   const audioBtn = document.getElementById("audioBtn")
   const resultContent = document.getElementById("resultContent")
   const logoutBtn = document.getElementById("logout")
   const API_GEMINI_KEY = "AIzaSyCsnBXKdeauNWlz_KYhjjUn3f8o7ClOpT4"
+  const hiddenGeminiBtn = document.getElementById("hiddenGeminiBtn")
+
+  // Add state variable for Gemini mode
+  let isGeminiMode = false
 
   // Fetch user profile to get avatar when page loads
   if (window.Auth) {
@@ -84,6 +89,8 @@ document.addEventListener("DOMContentLoaded", () => {
       uploadArea.style.display = "none"
       imagePreview.style.display = "block"
       renderBtn.disabled = false
+      // Reset result content when new image is uploaded
+      resetResult()
     }
 
     reader.readAsDataURL(file)
@@ -92,10 +99,18 @@ document.addEventListener("DOMContentLoaded", () => {
   // Remove image
   if (removeImage) {
     removeImage.addEventListener("click", () => {
+      // Reset image preview
       previewImg.src = ""
       imagePreview.style.display = "none"
       uploadArea.style.display = "block"
       renderBtn.disabled = true
+      
+      // Reset file input
+      if (imageUpload) {
+        imageUpload.value = ""
+      }
+      
+      // Reset result
       resetResult()
     })
   }
@@ -365,104 +380,166 @@ document.addEventListener("DOMContentLoaded", () => {
     })
   }
 
-  // Recognize text
+  // Handle image recognition
   if (renderBtn) {
     renderBtn.addEventListener("click", async () => {
       // Show loading state
       resultContent.innerHTML = '<p class="placeholder-text">Processing image...</p>'
 
       try {
-        // Gọi API nhận diện văn bản thực tế
-        const recognizedText = await simulateTextRecognition()
-        console.log("Recognized text:", recognizedText)
+        // Disable buttons during processing
+        renderBtn.disabled = true
+        audioBtn.disabled = true
+        downloadBtn.disabled = true
 
-        // Nếu không có kết quả nhận diện, hiển thị thông báo lỗi
-        if (!recognizedText || recognizedText.length === 0) {
-          throw new Error("Không thể nhận diện văn bản từ hình ảnh")
+        // Check if image is selected
+        if (!previewImg.src || previewImg.src === "/placeholder.svg") {
+          throw new Error("Vui lòng chọn ảnh trước")
         }
 
-        // Nếu kết quả là mảng, ghép lại thành chuỗi
-        const textOfficial = Array.isArray(recognizedText)
-          ? recognizedText.reduce((text, item) => text + item + "\n", "")
-          : recognizedText
+        console.log("Current Gemini mode:", isGeminiMode)
 
-        // URL API đúng dựa trên mẫu curl của bạn (sử dụng Gemini 2.0 Flash)
-        const response = await fetch(
-          "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" +
-            API_GEMINI_KEY,
-          {
-            method: "POST",
+        if (isGeminiMode) {
+          console.log("Using Gemini Vision mode - sending image directly to Gemini")
+          // Direct Gemini Vision mode
+          const base64Image = previewImg.src.split(',')[1]
+          console.log("Image converted to base64, length:", base64Image.length)
+          
+          const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + API_GEMINI_KEY, {
+            method: 'POST',
             headers: {
-              "Content-Type": "application/json",
+              'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              contents: [
+              contents: [{
+                parts: [
+                  {
+                    text: "Extract and return only the text content from this image. Do not add any explanations or additional text."
+                  },
+                  {
+                    inline_data: {
+                      mime_type: "image/jpeg",
+                      data: base64Image
+                    }
+                  }
+                ]
+              }],
+              generationConfig: {
+                temperature: 0.1,
+                topK: 32,
+                topP: 1,
+                maxOutputTokens: 2048,
+              },
+              safetySettings: [
                 {
-                  parts: [
-                    {
-                      text: `Tôi vừa OCR được đoạn văn sau:\n"${textOfficial}"\n, Xử lý ngôn ngữ tự nhiên, hãy sửa lại và trả về kết quả cho đúng chính tả, giữ nguyên thứ tự xuống dòng và cấu trúc đoạn văn, ngữ pháp và giữ nguyên ý nghĩa. 
-                              Lưu ý rằng, chỉ trả về kết quả là đoạn văn bản đã được xử lý, không cần gì thêm, vì kết quả đó là kết quả cuối cùng cho người dùng của tôi xem.`,
-                    },
-                  ],
+                  category: "HARM_CATEGORY_HARASSMENT",
+                  threshold: "BLOCK_MEDIUM_AND_ABOVE"
                 },
-              ],
-            }),
-          },
-        )
+                {
+                  category: "HARM_CATEGORY_HATE_SPEECH",
+                  threshold: "BLOCK_MEDIUM_AND_ABOVE"
+                },
+                {
+                  category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                  threshold: "BLOCK_MEDIUM_AND_ABOVE"
+                },
+                {
+                  category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+                  threshold: "BLOCK_MEDIUM_AND_ABOVE"
+                }
+              ]
+            })
+          })
 
-        if (!response.ok) {
-          const errorText = await response.text()
-          throw new Error(`API responded with status: ${response.status}. Details: ${errorText}`)
-        }
+          console.log("Gemini API response status:", response.status)
+          
+          if (!response.ok) {
+            const errorText = await response.text()
+            console.error("Gemini API error:", errorText)
+            throw new Error(`Lỗi khi gọi Gemini API: ${response.status} - ${errorText}`)
+          }
 
-        const data = await response.json()
-        console.log("API response:", data) // Log để debug
-
-        // Kiểm tra cấu trúc phản hồi API theo tài liệu mới nhất
-        if (
-          data &&
-          data.candidates &&
-          data.candidates.length > 0 &&
-          data.candidates[0].content &&
-          data.candidates[0].content.parts &&
-          data.candidates[0].content.parts.length > 0
-        ) {
-          const fixedText = data.candidates[0].content.parts[0].text
-
-          if (fixedText) {
-            resultContent.innerHTML = `<p class="recognized-text">${fixedText}</p>`
+          const data = await response.json()
+          console.log("Gemini API response data:", data)
+          
+          if (data.candidates && data.candidates[0].content.parts[0].text) {
+            const recognizedText = data.candidates[0].content.parts[0].text
+            console.log("Recognized text from Gemini:", recognizedText)
+            resultContent.innerHTML = `<p>${recognizedText}</p>`
+            audioBtn.disabled = false
+            downloadBtn.disabled = false
+            
+            // Save to history
+            await saveRecognitionToHistory(previewImg.src, recognizedText)
           } else {
-            throw new Error("Không tìm thấy văn bản trong kết quả API")
+            console.error("Invalid Gemini API response:", data)
+            throw new Error('Không nhận được kết quả nhận dạng từ Gemini')
           }
         } else {
-          // Xử lý trường hợp cấu trúc API response không đúng như mong đợi
-          console.error("Cấu trúc phản hồi API không hợp lệ:", data)
-          throw new Error("Cấu trúc phản hồi API không hợp lệ")
+          console.log("Using external API mode")
+          // Normal mode - use external API then Gemini for spell check
+          const recognizedText = await simulateTextRecognition()
+          console.log("External API recognition result:", recognizedText)
+          
+          if (!recognizedText || recognizedText.length === 0) {
+            throw new Error("Không thể nhận diện văn bản từ hình ảnh")
+          }
+
+          const textOfficial = Array.isArray(recognizedText)
+            ? recognizedText.reduce((text, item) => text + item + "\n", "")
+            : recognizedText
+
+          console.log("Sending text to Gemini for spell check")
+          const response = await fetch(
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" +
+              API_GEMINI_KEY,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                contents: [
+                  {
+                    parts: [
+                      {
+                        text: `Tôi vừa OCR được đoạn văn sau:\n"${textOfficial}"\n, Xử lý ngôn ngữ tự nhiên, hãy sửa lại và trả về kết quả cho đúng chính tả, giữ nguyên thứ tự xuống dòng và cấu trúc đoạn văn, ngữ pháp và giữ nguyên ý nghĩa. 
+                                Lưu ý rằng, chỉ trả về kết quả là đoạn văn bản đã được xử lý, không cần gì thêm, vì kết quả đó là kết quả cuối cùng cho người dùng của tôi xem.`,
+                      },
+                    ],
+                  },
+                ],
+              }),
+            },
+          )
+
+          if (!response.ok) {
+            throw new Error(`Lỗi khi xử lý văn bản: ${response.status}`)
+          }
+
+          const data = await response.json()
+          console.log("Gemini spell check response:", data)
+          
+          if (data.candidates && data.candidates[0].content.parts[0].text) {
+            const fixedText = data.candidates[0].content.parts[0].text
+            resultContent.innerHTML = `<p>${fixedText}</p>`
+            audioBtn.disabled = false
+            downloadBtn.disabled = false
+            
+            // Save to history
+            await saveRecognitionToHistory(previewImg.src, fixedText)
+          } else {
+            throw new Error('Không nhận được kết quả xử lý từ Gemini')
+          }
         }
       } catch (error) {
         console.error("Lỗi khi xử lý nhận diện:", error)
-        // Hiển thị thông báo lỗi cụ thể hơn
-        resultContent.innerHTML = `
-          <p class="error-text">Lỗi: ${error.message}</p>
-        `
+        resultContent.innerHTML = `<p class="error">Lỗi: ${error.message}</p>`
+        // Ensure buttons stay disabled on error
+        audioBtn.disabled = true
+        downloadBtn.disabled = true
       } finally {
-        // Bật nút audio và download trong mọi trường hợp
-        if (audioBtn) {
-          audioBtn.disabled = false
-        }
-        if (downloadBtn) {
-          downloadBtn.disabled = false
-        }
-
-        // Lưu kết quả vào lịch sử nếu người dùng đã đăng nhập
-        if (
-          window.Auth &&
-          window.Auth.isAuthenticated() &&
-          resultContent.textContent &&
-          !resultContent.textContent.includes("Lỗi:")
-        ) {
-          saveRecognitionToHistory(previewImg.src, resultContent.textContent)
-        }
+        renderBtn.disabled = false
       }
     })
   }
@@ -1068,9 +1145,7 @@ document.addEventListener("DOMContentLoaded", () => {
   async function simulateTextRecognition() {
     const fileInput = document.getElementById("imageUpload")
     if (!fileInput || !fileInput.files || !fileInput.files[0]) {
-      // Nếu không có file, sử dụng text mẫu cho mục đích demo
-      console.warn("Không có file ảnh, sử dụng text mẫu")
-      return "Dù cuộc sống có khó khăn như thế nào đi nữa, cũng đừng từ bỏ sự lương thiện, dù chúng ta có cô đơn như thế nào đi nữa, hãy đi theo con đường được xây dựng bởi nhân cách tốt. Con người sống trên đời này sẽ có những khó khăn, vất vả khác nhau nhưng hy vọng, với mỗi đau thương đi qua ta đều có thể cảm nhận được sự ấm áp của tình người.\n\nMột ngày nào đó, chúng ta sẽ hiểu, có tấm lòng lương thiện còn khó hơn có được trí thông minh. Bởi vì thông minh là thiên phú, còn lương thiện là lựa chọn của chính chúng ta."
+      throw new Error("Vui lòng chọn ảnh trước")
     }
 
     const formData = new FormData()
@@ -1084,16 +1159,60 @@ document.addEventListener("DOMContentLoaded", () => {
       })
 
       if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`)
+        throw new Error(`Lỗi khi nhận dạng: ${response.status}`)
       }
 
       const result = await response.json()
+      if (!result.texts || result.texts.length === 0) {
+        throw new Error("Không nhận được kết quả nhận dạng")
+      }
       return result.texts
     } catch (error) {
       console.error("Error during the fetch:", error)
-      // Trả về text mẫu nếu có lỗi (chỉ cho mục đích demo)
-      return "Dù cuộc sống có khó khăn như thế nào đi nữa, cũng đừng từ bỏ sự lương thiện, dù chúng ta có cô đơn như thế nào đi nữa, hãy đi theo con đường được xây dựng bởi nhân cách tốt. Con người sống trên đời này sẽ có những khó khăn, vất vả khác nhau nhưng hy vọng, với mỗi đau thương đi qua ta đều có thể cảm nhận được sự ấm áp của tình người.\n\nMột ngày nào đó, chúng ta sẽ hiểu, có tấm lòng lương thiện còn khó hơn có được trí thông minh. Bởi vì thông minh là thiên phú, còn lương thiện là lựa chọn của chính chúng ta."
+      throw error
     }
+  }
+
+  // Add styles for hidden Gemini button
+  const style = document.createElement("style")
+  style.textContent = `
+    .hidden-gemini-btn {
+      position: fixed;
+      top: 20px;
+      right: 80px;
+      width: 8px;
+      height: 8px;
+      background-color: transparent;
+      border: none;
+      border-radius: 50%;
+      cursor: default;
+      z-index: 1000;
+      transition: all 0.3s ease;
+      display: none;
+    }
+    .hidden-gemini-btn.active {
+      background-color: #22c55e;
+      display: block;
+      box-shadow: 0 0 8px rgba(34, 197, 94, 0.5);
+    }
+  `
+  document.head.appendChild(style)
+
+  // Show hidden button
+  hiddenGeminiBtn.style.display = "block"
+
+  // Handle keyboard shortcut
+  document.addEventListener('keydown', (event) => {
+    if (event.key.toLowerCase() === 'g') {
+      isGeminiMode = !isGeminiMode
+      hiddenGeminiBtn.classList.toggle('active')
+      console.log("Gemini mode changed to:", isGeminiMode)
+    }
+  })
+
+  // Remove click event from hidden button since it's just a status indicator
+  if (hiddenGeminiBtn) {
+    hiddenGeminiBtn.style.cursor = "default"
   }
 })
 

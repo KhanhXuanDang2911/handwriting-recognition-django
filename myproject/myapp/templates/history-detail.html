@@ -1,0 +1,187 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <div class="history-detail">
+        <h2>Chi tiết lịch sử nhận dạng</h2>
+
+        <div class="detail-content">
+            <div class="image-section">
+                <h3>Hình ảnh gốc</h3>
+                <img id="detailImage" src="{{ history.image.url }}" alt="Original Image" class="history-image">
+            </div>
+
+            <div class="text-section">
+                <h3>Kết quả nhận dạng</h3>
+                <div class="recognized-text">
+                    {{ history.result|linebreaks }}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Image Modal -->
+<div id="imageModal" class="modal">
+    <span class="close">&times;</span>
+    <img class="modal-content" id="modalImage">
+    <div class="modal-caption">Click outside or press ESC to close</div>
+</div>
+
+<style>
+    .history-detail {
+        max-width: 1200px;
+        margin: 2rem auto;
+        padding: 2rem;
+        background: white;
+        border-radius: 1rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .detail-content {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem;
+        margin-top: 2rem;
+    }
+
+    .image-section,
+    .text-section {
+        padding: 1rem;
+    }
+
+    .history-image {
+        width: 100%;
+        height: auto;
+        border-radius: 0.5rem;
+        cursor: pointer;
+        transition: transform 0.3s ease;
+    }
+
+    .history-image:hover {
+        transform: scale(1.02);
+    }
+
+    .recognized-text {
+        background: #f8f9fa;
+        padding: 1.5rem;
+        border-radius: 0.5rem;
+        white-space: pre-wrap;
+        font-size: 1.1rem;
+        line-height: 1.6;
+    }
+
+    /* Modal styles */
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.9);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .modal.show {
+        opacity: 1;
+    }
+
+    .modal-content {
+        margin: auto;
+        display: block;
+        max-width: 90%;
+        max-height: 90vh;
+        object-fit: contain;
+        transform: scale(0.9);
+        transition: transform 0.3s ease;
+    }
+
+    .modal.show .modal-content {
+        transform: scale(1);
+    }
+
+    .close {
+        position: absolute;
+        right: 35px;
+        top: 15px;
+        color: #f1f1f1;
+        font-size: 40px;
+        font-weight: bold;
+        cursor: pointer;
+        opacity: 0.7;
+        transition: opacity 0.3s ease;
+    }
+
+    .close:hover {
+        opacity: 1;
+    }
+
+    .modal-caption {
+        position: absolute;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        color: #f1f1f1;
+        font-size: 14px;
+        opacity: 0.7;
+        text-align: center;
+        width: 100%;
+        padding: 10px;
+    }
+
+    @media (max-width: 768px) {
+        .detail-content {
+            grid-template-columns: 1fr;
+        }
+
+        .modal-content {
+            max-width: 95%;
+        }
+
+        .close {
+            right: 20px;
+            top: 10px;
+            font-size: 30px;
+        }
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var img = document.getElementById('detailImage');
+        var modal = document.getElementById('imageModal');
+        var modalImg = document.getElementById('modalImage');
+        var closeBtn = document.querySelector('#imageModal .close');
+        if (img) {
+            img.onclick = function () {
+                modal.style.display = "block";
+                modalImg.src = img.src;
+                setTimeout(() => modal.classList.add('show'), 10);
+            }
+        }
+        if (closeBtn) {
+            closeBtn.onclick = function () {
+                modal.classList.remove('show');
+                setTimeout(() => modal.style.display = "none", 300);
+            }
+        }
+        if (modal) {
+            modal.addEventListener('click', function (event) {
+                if (event.target === modal) {
+                    modal.classList.remove('show');
+                    setTimeout(() => modal.style.display = "none", 300);
+                }
+            });
+        }
+        document.addEventListener('keydown', function (event) {
+            if (event.key === "Escape" && modal && modal.style.display === "block") {
+                modal.classList.remove('show');
+                setTimeout(() => modal.style.display = "none", 300);
+            }
+        });
+    });
+</script>
+{% endblock %}
